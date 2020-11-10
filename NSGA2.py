@@ -45,7 +45,7 @@ def crossover():
 def mutation():
     pass
 
-def run_NSGA2(image, pop_size, n_generation,fitness_fn):
+def run_NSGA2(model, image, pop_size, n_generation,fitness_fn):
     """
     하나의 이미지가 들어왔을 때 NSGA2 알고리즘을 활용하여 2개의 fitness function에 대한 pareto-front를 구한다.
     위의 initialize_population, fast_non_dominated_sort, crowding_distance, crossover, mutation 등의 논문의 함수를 구현하여 사용한다.
@@ -99,4 +99,4 @@ if __name__ == '__main__':
     from fitness import attack_fitness,perturbation_fitness
     import cv2
     
-    pareto_front = run_NSGA2(image, pop_size = 10, n_generation = 50, fitness_fn = (attack_fitness,perturbation_fitness))
+    pareto_front = run_NSGA2(model, image, pop_size = 10, n_generation = 50, fitness_fn = (attack_fitness,perturbation_fitness))
