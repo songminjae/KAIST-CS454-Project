@@ -2,10 +2,6 @@ def initialize_population(pop_size):
     pass
 
 def fast_non_dominated_sort(fitness_fn):
-    ###### TODO (만들어야 할 함수들) ######
-
-    # dominate([f1, f2], [f1, f2]): 왼쪽 fitness pair가 오른쪽보다 나은 선택이면 True 아니면 False
-
     fronts = [[]]
     S = [[] for i in range(len(fitness_fn))]
     n = [-1 for i in range(len(fitness_fn))]
@@ -36,8 +32,34 @@ def fast_non_dominated_sort(fitness_fn):
 
     return front[:len(front)-1]
 
-def crowding_distance():
-    pass
+def dominate(f1, f2):
+    if (f1[0] > f2[0] and f1[1] > f2[1]) or (f1[0] >= f2[0] and f1[1] > f2[1]) or (f1[0] > f2[0] and f1[1] >= f2[1]):
+        return True
+    return False
+
+def crowding_distance(fitness):
+    ###### TODO : 이 함수 아직 완성 못했습니다
+
+    distances = [0.0] * len(fitness)
+    crowd = [(f_value, i) for i, f_value in enumerate(fitness)]  # create keys for fitness values
+
+    for i in range(2): # calculate for each objective
+        crowd.sort(key=lambda element: element[0][i])
+        # After sorting,  boundary solutions are assigned Inf 
+        # crowd: [([obj_1, obj_2, ...], i_0), ([obj_1, obj_2, ...], i_1), ...]
+        distances[crowd[0][1]] = float("Inf")
+        distances[crowd[-1][1]] = float("inf")
+        if crowd[-1][0][i] == crowd[0][0][i]:  # If objective values are same, skip this loop
+            continue
+        # normalization (max - min) as Denominator
+        norm = float(crowd[-1][0][i] - crowd[0][0][i])
+        # crowd: [([obj_1, obj_2, ...], i_0), ([obj_1, obj_2, ...], i_1), ...]
+        # calculate each individual's Crowding Distance of i th objective
+        # technique: shift the list and zip
+        for prev, cur, next in zip(crowd[:-2], crowd[1:-1], crowd[2:]):
+            distances[cur[1]] += (next[0][i] - prev[0][i]) / norm  # sum up the distance of ith individual along each of the objectives
+
+    return distances
 
 def crossover():
     pass
@@ -45,7 +67,7 @@ def crossover():
 def mutation():
     pass
 
-def run_NSGA2(model, image, pop_size, n_generation,fitness_fn):
+def run_NSGA2(model, image, pop_size, n_generation, fitness_fn):
     """
     하나의 이미지가 들어왔을 때 NSGA2 알고리즘을 활용하여 2개의 fitness function에 대한 pareto-front를 구한다.
     위의 initialize_population, fast_non_dominated_sort, crowding_distance, crossover, mutation 등의 논문의 함수를 구현하여 사용한다.
