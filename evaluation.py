@@ -33,4 +33,4 @@ if __name__ == '__main__':
     dataset = load_dataset('imagenet64')
     dataloader = load_dataloader(dataset)
     
-    attack_success_rate, perterbation, query_cnt = evaluate(model = model, dataloader = dataloader, MOEA_algorithm = run_NSGA2)
+    attack_success_rate, perturbation, query_cnt = evaluate(model = model, dataloader = dataloader, MOEA_algorithm = run_NSGA2)
