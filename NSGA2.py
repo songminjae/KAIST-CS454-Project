@@ -38,26 +38,17 @@ def dominate(f1, f2):
     return False
 
 def crowding_distance(fitness):
-    ###### TODO : 이 함수 아직 완성 못했습니다
-
     distances = [0.0] * len(fitness)
-    crowd = [(f_value, i) for i, f_value in enumerate(fitness)]  # create keys for fitness values
+    crowd = [(f_value, i) for i, f_value in enumerate(fitness)]
 
-    for i in range(2): # calculate for each objective
+    for i in range(2):
         crowd.sort(key=lambda element: element[0][i])
-        # After sorting,  boundary solutions are assigned Inf 
-        # crowd: [([obj_1, obj_2, ...], i_0), ([obj_1, obj_2, ...], i_1), ...]
-        distances[crowd[0][1]] = float("Inf")
+        distances[crowd[0][1]] = float("inf")
         distances[crowd[-1][1]] = float("inf")
-        if crowd[-1][0][i] == crowd[0][0][i]:  # If objective values are same, skip this loop
-            continue
-        # normalization (max - min) as Denominator
-        norm = float(crowd[-1][0][i] - crowd[0][0][i])
-        # crowd: [([obj_1, obj_2, ...], i_0), ([obj_1, obj_2, ...], i_1), ...]
-        # calculate each individual's Crowding Distance of i th objective
-        # technique: shift the list and zip
-        for prev, cur, next in zip(crowd[:-2], crowd[1:-1], crowd[2:]):
-            distances[cur[1]] += (next[0][i] - prev[0][i]) / norm  # sum up the distance of ith individual along each of the objectives
+        normalization = float(crowd[-1][0][i] - crowd[0][0][i])
+        if normalization == 0: continue
+        for j in range(1, len(fitness)-1):
+            distances[j] += (crowd[j+1][0][i] - crowd[j-1][0][i]) / normalization
 
     return distances
 
