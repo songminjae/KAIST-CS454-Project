@@ -1,3 +1,7 @@
+from fitness import attack_fitness, perturbation_fitness
+
+query_cnt = 0
+
 def evaluate(model, dataloader, MOEA_algorithm):
     """
     model, dataloader, MOEA_algorithm이 input으로 들어올 때, 
@@ -14,14 +18,33 @@ def evaluate(model, dataloader, MOEA_algorithm):
         'L_inf' : 0.,
         'Z' : 0.
     }
-    query_cnt = 0.
+    query_cnt = 0
     
     ####################################################
     ####################################################
     ################ implement in here #################
     ####################################################
     ####################################################
+
+    fitness_fn = (attack_fitness, perturbation_fitness)
     
+    #Adapted from POBA-GA paper
+    pop_size = 50
+    n_generation = 400
+
+    cnt = 0
+    
+    for data in dataloader:
+        result = MOEA_algorithm(model, data, pop_size, n_generation, fitness_fn)
+        for res in result:
+            cnt+=1
+            a, b = res
+            attack_success_rate += a
+            perturbation += b
+    
+    attack_success_rate/=cnt
+    perturbation/=cnt
+
     return attack_success_rate, perturbation, query_cnt
 
 if __name__ == '__main__':
