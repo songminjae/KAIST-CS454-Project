@@ -21,19 +21,22 @@ def fast_non_dominated_sort(fitness_fn):
     fronts = [[]]
     S = [[] for i in range(len(fitness_fn))]
     n = [-1 for i in range(len(fitness_fn))]
+    rank = [-1 for i in range(len(fitness_fn))]
 
     for p in range(len(fitness_fn)):
         S[p] = []
         n[p] = 0
         for q in range(len(fitness_fn))[p+1:]:
-            if dominate(fitness_fn[p], fitness_fn[q]):  # TODO
+            if dominate(fitness_fn[p], fitness_fn[q]):
                 n[q] = n[q] + 1
                 S[p].append(q)
             elif dominate(fitness_fn[q], fitness_fn[p]):
                 n[p] = n[p] + 1
                 S[q].append(p)
         if n[p] == 0:
-            fronts[0].append(p)
+            rank[p] = 0
+            if p not in front[0]:
+                fronts[0].append(p)
 
     cnt = 0
     while (fronts[cnt]):
@@ -41,12 +44,14 @@ def fast_non_dominated_sort(fitness_fn):
         for p in fronts[cnt]:
             for q in S[p]:
                 n[q] = n[q] - 1
-                if n[q] == 0 and q not in next_front:
-                    next_front.append(q)
+                if n[q] == 0:
+                    rank[q] = i+1
+                    if q not in next_front:
+                        next_front.append(q)
         fronts.append(next_front)
         cnt = cnt + 1
 
-    return fronts[:len(fronts)-1]
+    return fronts[:len(fronts)-1], rank
 
 
 def dominate(f1, f2):
@@ -110,13 +115,15 @@ def run_NSGA2(model, image, pop_size, n_generation, fitness_fn):
     fitness_fn_1, fitness_fn_2 = fitness_fn
     pareto_front = []
 
-    iteration = 0
+    iteration = 1
     parent = initialize_population(pop_size)
-    offspring = do_selection_crossover_mutation(parent)  # TODO
+    pareto_front, rank = fast_non_dominated_sort(fitness(parent))
+    offspring = do_selection_crossover_mutation(
+        parent, rank, crowding_distance(pareto_front))  # TODO
 
     while (iteration < n_generation):
         temp = parent + offspring
-        pareto_front = fast_non_dominated_sort(fitness(temp))  # TODO
+        pareto_front, rank = fast_non_dominated_sort(fitness(temp))
         parent = []
         cnt = 0
         crowding_distance_list = []
@@ -125,7 +132,8 @@ def run_NSGA2(model, image, pop_size, n_generation, fitness_fn):
             parent = parent + pareto_front[cnt]
             cnt = cnt + 1
         parent = parent + pareto_front[:(pop_size - len(parent))]
-        offspring = do_selection_crossover_mutation(parent)
+        offspring = do_selection_crossover_mutation(
+            parent, rank, crowding_distance_list)
         iteration = iteration + 1
 
     return pareto_front
@@ -136,11 +144,16 @@ def visualize(pareto_front, path):
     pareto front를 이미지 파일로 저장한다.
     """
 
-    ####################################################
-    ####################################################
-    ################ implement in here #################
-    ####################################################
-    ####################################################
+    x = []
+    y = []
+    for i in range(len(pareto_front)):
+        x.append(pareto_front[i][0])
+        y.append(pareto_front[i][1])
+    plt.title('Pareto fronts')
+    plt.xlabel('Objective 1')  # name to be specified later
+    plt.ylabel('Objective 2')  # name to be specified later
+    plt.scatter(x, y)
+    plt.savefig('fronts.png', bbox_inches='tight')
 
     return
 
