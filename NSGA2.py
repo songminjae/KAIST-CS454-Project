@@ -1,8 +1,20 @@
 import numpy as np
+import cv2
+import matplotlib.pyplot as plt
+# how about number of noise point, nois point size? How?
 
 
-def initialize_population(pop_size):
-    pass
+# initialize perturbations with size of pop_size, with list of random gaussian distribution
+def initialize_population(pop_size, origin_img):
+    img = np.array(origin_img)
+    init_pop = []
+    for i in range(pop_size):
+        variance = np.random.normal(0, 1) + 1
+        noise = np.random.normal(
+            0, variance, size=img.shape)  # varies variance when picking noise
+        init_pop.append(noise)
+    # 나중에 사용할 때, np.clip(img + noise, 0, 1)으로 visible한 이미지 만들 수 있을 듯
+    return init_pop
 
 
 def fast_non_dominated_sort(fitness_fn):
