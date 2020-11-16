@@ -48,8 +48,8 @@ def fast_non_dominated_sort(fitness_list, final):
                             next_front.append(q)
             fronts.append(next_front)
             cnt = cnt + 1
-
-    fronts = fronts.pop()
+        fronts = fronts.pop()
+    
     for front in fronts:
         for index in front:
             front[index] = fitness_list[front[index]]
