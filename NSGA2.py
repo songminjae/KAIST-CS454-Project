@@ -17,41 +17,44 @@ def initialize_population(pop_size, origin_img):
     return init_pop
 
 
-def fast_non_dominated_sort(fitness_fn):
+def fast_non_dominated_sort(fitness_list, final):
     fronts = [[]]
-    S = [[] for i in range(len(fitness_fn))]
-    n = [-1 for i in range(len(fitness_fn))]
-    rank = [-1 for i in range(len(fitness_fn))]
+    S = [[] for i in range(len(fitness_list))]
+    n = [-1 for i in range(len(fitness_list))]
 
-    for p in range(len(fitness_fn)):
+    for p in range(len(fitness_list)):
         S[p] = []
         n[p] = 0
-        for q in range(len(fitness_fn))[p+1:]:
-            if dominate(fitness_fn[p], fitness_fn[q]):
+        for q in range(len(fitness_list))[p+1:]:
+            if dominate(fitness_list[p], fitness_list[q]):
                 n[q] = n[q] + 1
                 S[p].append(q)
-            elif dominate(fitness_fn[q], fitness_fn[p]):
+            elif dominate(fitness_list[q], fitness_list[p]):
                 n[p] = n[p] + 1
                 S[q].append(p)
         if n[p] == 0:
-            rank[p] = 0
             if p not in front[0]:
                 fronts[0].append(p)
+    
+    if not final:
+        cnt = 0
+        while (fronts[cnt]):
+            next_front = []
+            for p in fronts[cnt]:
+                for q in S[p]:
+                    n[q] = n[q] - 1
+                    if n[q] == 0:
+                        if q not in next_front:
+                            next_front.append(q)
+            fronts.append(next_front)
+            cnt = cnt + 1
 
-    cnt = 0
-    while (fronts[cnt]):
-        next_front = []
-        for p in fronts[cnt]:
-            for q in S[p]:
-                n[q] = n[q] - 1
-                if n[q] == 0:
-                    rank[q] = i+1
-                    if q not in next_front:
-                        next_front.append(q)
-        fronts.append(next_front)
-        cnt = cnt + 1
+    fronts = fronts.pop()
+    for front in fronts:
+        for index in front:
+            front[index] = fitness_list[front[index]]
 
-    return fronts[:len(fronts)-1], rank
+    return fronts
 
 
 def dominate(f1, f2):
@@ -72,10 +75,46 @@ def crowding_distance(fitness):
         if normalization == 0:
             continue
         for j in range(1, len(fitness)-1):
-            distances[j] += (crowd[j+1][0][i] - crowd[j-1]
-                             [0][i]) / normalization
+            distances[j] += (crowd[j+1][0][i] - crowd[j-1][0][i]) / normalization
 
     return distances
+
+
+def quick_sort(combined_list):
+    if len(combined_list) <= 1: return combined_list
+    pivot = len(combined_list) // 2
+    left, middle, right = [], [], []
+    for i in range(len(combined_list)):
+        if combined_list[i][0] > combined_list[pivot][0]:
+            left.append((combined_list[i]))
+        elif combined_list[i][0] < combined_list[pivot][0]:
+            right.append((combined_list[i]))
+        else:
+            middle.append((combined_list[i]))
+    return quick_sort(left) + middle + quick_sort(right)
+
+
+def selection(pop_size, fronts):
+    N = 0
+    new_pop = []
+    while N < pop_size:
+        for i in range(len(fronts)):
+            N = N + len(fronts[i])
+            if N > pop_size:
+                combined_list = []
+                cdlist = crowding_distance(fronts[i])
+                for j in range(len(fronts[i])):
+                    combined_list.append([cdlist[j], fronts[i][j])
+                sorted_combined_list = quick_sort(combined_list)
+                cnt = 0
+                while len(new_pop) < pop_size:            
+                    new_pop.append(sorted_combined_list[cnt][1])
+                    cnt = cnt + 1          
+                break
+            else:
+                new_pop.extend(fronts[i])
+    
+    return new_pop
 
 
 def crossover(prob_c, p1, p2):  # input of 2 different perturbation with np.array
@@ -109,34 +148,29 @@ def run_NSGA2(model, image, pop_size, n_generation, fitness_fn):
     ###### TODO (만들어야 할 함수들) ######
 
     # do_selection_crossover_mutation(parent): input은 부모 이미지 리스트, output은 자식 이미지 리스트
-    # 이 때 selection의 우선순위: rank가 낮을수록, crowding distance가 클수록 우선순위 올라감
     # fitness(temp): input은 이미지 리스트, output은 각 이미지의 피트니스 값들(attack success rate & perturbation의 pair 형태)로 이루어진 리스트([[f1, f2], [f1, f2], ...]])
 
     fitness_fn_1, fitness_fn_2 = fitness_fn
     pareto_front = []
 
     iteration = 1
-    parent = initialize_population(pop_size)
-    pareto_front, rank = fast_non_dominated_sort(fitness(parent))
-    offspring = do_selection_crossover_mutation(
-        parent, rank, crowding_distance(pareto_front))  # TODO
+    parent = initialize_population(pop_size, image)
+    pareto_front = fast_non_dominated_sort(fitness(parent), 0)
+    offspring = do_selection_crossover_mutation(pop_size, parent, crowding_distance(pareto_front)) # TODO
 
     while (iteration < n_generation):
         temp = parent + offspring
-        pareto_front, rank = fast_non_dominated_sort(fitness(temp))
+        pareto_front = fast_non_dominated_sort(fitness(temp), 0)
         parent = []
         cnt = 0
-        crowding_distance_list = []
-        while (len(parent) + len(pareto_front) < pop_size):
-            crowding_distance_list.append(crowding_distance(pareto_front))
+        while (len(parent) + len(pareto_front[cnt]) < pop_size):
             parent = parent + pareto_front[cnt]
             cnt = cnt + 1
-        parent = parent + pareto_front[:(pop_size - len(parent))]
-        offspring = do_selection_crossover_mutation(
-            parent, rank, crowding_distance_list)
+        parent = parent + pareto_front[cnt][:(pop_size - len(parent))]
+        offspring = do_selection_crossover_mutation(pop_size, parent)
         iteration = iteration + 1
 
-    return pareto_front
+    return fast_non_dominated_sort(fitness[parent], 1)
 
 
 def visualize(pareto_front, path):
