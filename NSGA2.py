@@ -1,6 +1,8 @@
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
+import torch
+import torch.nn.functional as F
 # how about number of noise point, nois point size? How?
 
 
@@ -150,13 +152,23 @@ def fitness(pop, model, image, fitness_fn):
     fit_1 = []
     fit_2 = []
     for chromosome in enumerate(pop):
-        fit_1.append(fitness_fn_1(chromosome의 클래스별 confidence 리스트, 원본 이미지의 클래스별 confidence 리스트))
-            # TODO: 클래스별 confidence list 받는 코드 필요
+        fit_1.append(fitness_fn_1(confidence(chromosome), confidence(image)))
         fit_2.append(fitness_fn_2(chromosome, image))
     fit_list = []
     for (a, b) in (fit_1, fit_2):
         fit_list.append(a,b)
     return fit_list
+
+
+def confidence(img):
+    img = torch.Tensor(img).unsqueeze(0)
+    img = img.cuda()
+    with torch.no_grad():
+        logits = model(img)
+        prediction = F.softmax(logits,dim = -1)
+        prediction = prediction.cpu().detach().numpy()
+    
+    return prediction[0]
 
 
 def run_NSGA2(model, image, pop_size, n_generation, fitness_fn):
