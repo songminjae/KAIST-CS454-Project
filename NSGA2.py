@@ -171,12 +171,12 @@ def run_NSGA2(model, image, pop_size, n_generation, fitness_fn):
 
     iteration = 1
     parent = initialize_population(pop_size, image)
-    pareto_front = fast_non_dominated_sort(fitness(parent, image, fitness_fn), 0)
+    pareto_front = fast_non_dominated_sort(fitness(parent, model, image, fitness_fn), 0)
     offspring = do_selection_crossover_mutation(pop_size, parent) # TODO
 
     while (iteration < n_generation):
         temp = parent + offspring
-        pareto_front = fast_non_dominated_sort(fitness(temp, image, fitness_fn), 0)
+        pareto_front = fast_non_dominated_sort(fitness(temp, model, image, fitness_fn), 0)
         parent = []
         cnt = 0
         while (len(parent) + len(pareto_front[cnt]) < pop_size):
@@ -186,7 +186,7 @@ def run_NSGA2(model, image, pop_size, n_generation, fitness_fn):
         offspring = do_selection_crossover_mutation(pop_size, parent)
         iteration = iteration + 1
 
-    return fast_non_dominated_sort(fitness(parent, image, fitness_fn), 1)
+    return fast_non_dominated_sort(fitness(parent, model, image, fitness_fn), 1)
 
 
 def visualize(pareto_front, path):
