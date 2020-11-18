@@ -137,6 +137,28 @@ def mutation(prob_m, p):
     return a
 
 
+def do_selection_crossover_mutation(pop_size, pop):
+    s = selection(pop)
+    # TODO: 아래 2개 함수 입력변수 지정 필요
+    # c = crossover()
+    # m = mutation()
+    return m
+
+
+def fitness(pop, model, image, fitness_fn):
+    fitness_fn_1, fitness_fn_2 = fitness_fn
+    fit_1 = []
+    fit_2 = []
+    for chromosome in enumerate(pop):
+        fit_1.append(fitness_fn_1(chromosome의 클래스별 confidence 리스트, 원본 이미지의 클래스별 confidence 리스트))
+            # TODO: 클래스별 confidence list 받는 코드 필요
+        fit_2.append(fitness_fn_2(chromosome, image))
+    fit_list = []
+    for (a, b) in (fit_1, fit_2):
+        fit_list.append(a,b)
+    return fit_list
+
+
 def run_NSGA2(model, image, pop_size, n_generation, fitness_fn):
     """
     하나의 이미지가 들어왔을 때 NSGA2 알고리즘을 활용하여 2개의 fitness function에 대한 pareto-front를 구한다.
@@ -144,23 +166,17 @@ def run_NSGA2(model, image, pop_size, n_generation, fitness_fn):
 
     최종 아웃풋 형태 : pareto_front = [[f1,f2], [f1,f2], ...] : list of lists
     """
-
-    ###### TODO (만들어야 할 함수들) ######
-
-    # do_selection_crossover_mutation(parent): input은 부모 이미지 리스트, output은 자식 이미지 리스트
-    # fitness(temp): input은 이미지 리스트, output은 각 이미지의 피트니스 값들(attack success rate & perturbation의 pair 형태)로 이루어진 리스트([[f1, f2], [f1, f2], ...]])
-
-    fitness_fn_1, fitness_fn_2 = fitness_fn
+    
     pareto_front = []
 
     iteration = 1
     parent = initialize_population(pop_size, image)
-    pareto_front = fast_non_dominated_sort(fitness(parent), 0)
-    offspring = do_selection_crossover_mutation(pop_size, parent, crowding_distance(pareto_front)) # TODO
+    pareto_front = fast_non_dominated_sort(fitness(parent, image, fitness_fn), 0)
+    offspring = do_selection_crossover_mutation(pop_size, parent) # TODO
 
     while (iteration < n_generation):
         temp = parent + offspring
-        pareto_front = fast_non_dominated_sort(fitness(temp), 0)
+        pareto_front = fast_non_dominated_sort(fitness(temp, image, fitness_fn), 0)
         parent = []
         cnt = 0
         while (len(parent) + len(pareto_front[cnt]) < pop_size):
@@ -170,7 +186,7 @@ def run_NSGA2(model, image, pop_size, n_generation, fitness_fn):
         offspring = do_selection_crossover_mutation(pop_size, parent)
         iteration = iteration + 1
 
-    return fast_non_dominated_sort(fitness[parent], 1)
+    return fast_non_dominated_sort(fitness(parent, image, fitness_fn), 1)
 
 
 def visualize(pareto_front, path):
