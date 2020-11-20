@@ -7,13 +7,25 @@ import torch.nn.functional as F
 
 
 # initialize perturbations with size of pop_size, with list of random gaussian distribution
-def initialize_population(pop_size, origin_img):
-    img = np.array(origin_img)
+def initialize_population(pop_size, origin_img_path):
+    img = cv2.imread(origin_img_path)[..., ::-1]/255.0  # original image
     init_pop = []
     for i in range(pop_size):
-        variance = np.random.normal(0, 1) + 1
+        variance = np.random.normal(0, 0.5) + 1
+        variance = np.clip(variance, 0, 2)
         noise = np.random.normal(
             0, variance, size=img.shape)  # varies variance when picking noise
+        noise = noise * 0.2  # 여기 곱하는 수가 작아질 수록 원래 이미지와 비슷한 경향이 있음
+
+        random_matrix = np.random.rand(
+            img.shape[0], img.shape[1], img.shape[2])
+
+        for i in range(len(random_matrix)):
+            for j in range(len(random_matrix[i])):
+                for k in range(len(random_matrix[i][j])):
+                    if random_matrix[i][j][k] > 0.5:
+                        noise[i][j][k] = 0.0
+
         init_pop.append(noise)
     # 나중에 사용할 때, np.clip(img + noise, 0, 1)으로 visible한 이미지 만들 수 있을 듯
     return init_pop
@@ -37,7 +49,7 @@ def fast_non_dominated_sort(fitness_list, final):
         if n[p] == 0:
             if p not in front[0]:
                 fronts[0].append(p)
-    
+
     if not final:
         cnt = 0
         while (fronts[cnt]):
@@ -51,7 +63,7 @@ def fast_non_dominated_sort(fitness_list, final):
             fronts.append(next_front)
             cnt = cnt + 1
         fronts = fronts.pop()
-    
+
     for front in fronts:
         for index in front:
             front[index] = fitness_list[front[index]]
@@ -77,7 +89,8 @@ def crowding_distance(fitness):
         if normalization == 0:
             continue
         for j in range(1, len(fitness)-1):
-            distances[j] += (crowd[j+1][0][i] - crowd[j-1][0][i]) / normalization
+            distances[j] += (crowd[j+1][0][i] - crowd[j-1]
+                             [0][i]) / normalization
 
     return distances
 
@@ -109,13 +122,13 @@ def selection(pop_size, fronts):
                     combined_list.append([cdlist[j], fronts[i][j])
                 sorted_combined_list = quick_sort(combined_list)
                 cnt = 0
-                while len(new_pop) < pop_size:            
+                while len(new_pop) < pop_size:
                     new_pop.append(sorted_combined_list[cnt][1])
-                    cnt = cnt + 1          
+                    cnt= cnt + 1
                 break
             else:
                 new_pop.extend(fronts[i])
-    
+
     return new_pop
 
 
@@ -140,11 +153,23 @@ def mutation(prob_m, p):
 
 
 def do_selection_crossover_mutation(pop_size, pop):
+    offs = []
     s = selection(pop)
     # TODO: 아래 2개 함수 입력변수 지정 필요
     # c = crossover()
     # m = mutation()
-    return m
+
+    # pop_size는 무조건 짝수여야함!!!!
+    for i in range(len(s)/2):
+        a1 = s[2*i]
+        a2 = s[2*i + 1]
+        new_a1, new_a2= crossover(0.5, a1, a2)  # HP hyperparameter prob_c
+        new_a1= mutation(0.5, new_a1)
+        new_a2 = mutation(0.5, new_a2)  # HP hyperparameter prob_m
+        offs.append(new_a1)
+        offs.append(new_a2)
+    ###
+    return offs
 
 
 def fitness(pop, model, image, fitness_fn):
@@ -156,7 +181,7 @@ def fitness(pop, model, image, fitness_fn):
         fit_2.append(fitness_fn_2(chromosome, image))
     fit_list = []
     for (a, b) in (fit_1, fit_2):
-        fit_list.append(a,b)
+        fit_list.append(a, b)
     return fit_list
 
 
@@ -165,9 +190,9 @@ def confidence(img):
     img = img.cuda()
     with torch.no_grad():
         logits = model(img)
-        prediction = F.softmax(logits,dim = -1)
+        prediction= F.softmax(logits, dim = -1)
         prediction = prediction.cpu().detach().numpy()
-    
+
     return prediction[0]
 
 
@@ -178,7 +203,7 @@ def run_NSGA2(model, image, pop_size, n_generation, fitness_fn):
 
     최종 아웃풋 형태 : pareto_front = [[f1,f2], [f1,f2], ...] : list of lists
     """
-    
+
     pareto_front = []
 
     iteration = 1
