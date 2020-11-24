@@ -43,45 +43,42 @@ def initialize_population(pop_size, origin_img_path):
 def fast_non_dominated_sort(fitness_list, final):
     fronts = [[]]
     S = [[] for i in range(len(fitness_list))]
-    n = [-1 for i in range(len(fitness_list))]
+    n = [0 for i in range(len(fitness_list))]
 
     for p in range(len(fitness_list)):
-        S[p] = []
-        n[p] = 0
-        for q in range(len(fitness_list))[p+1:]:
+        for q in range(p+1,len(fitness_list)):
             if dominate(fitness_list[p], fitness_list[q]):
                 n[q] = n[q] + 1
-                S[p].append(q)
+                S[p].append(fitness_list[q])
             elif dominate(fitness_list[q], fitness_list[p]):
                 n[p] = n[p] + 1
-                S[q].append(p)
+                S[q].append(fitness_list[p])
+    for p in range(len(fitness_list)):
         if n[p] == 0:
-            if p not in front[0]:
-                fronts[0].append(p)
-
+            fronts[0].append(fitness_list[p])
+    
     if not final:
         cnt = 0
         while (fronts[cnt]):
             next_front = []
             for p in fronts[cnt]:
-                for q in S[p]:
-                    n[q] = n[q] - 1
-                    if n[q] == 0:
-                        if q not in next_front:
-                            next_front.append(q)
-            fronts.append(next_front)
-            cnt = cnt + 1
-        fronts = fronts.pop()
-
-    for front in fronts:
-        for index in front:
-            front[index] = fitness_list[front[index]]
-
+                idx_p = fitness_list.index(p)
+                for q in S[idx_p]:
+                    idx_q = fitness_list.index(q)
+                    n[idx_q] = n[idx_q] - 1
+                    if n[idx_q] == 0:
+                        if fitness_list[idx_q] not in next_front:
+                            next_front.append(fitness_list[idx_q])
+            if (len(next_front) > 0):
+                fronts.append(next_front)
+                cnt = cnt + 1
+            else:
+                break
     return fronts
 
 
 def dominate(f1, f2):
-    if (f1[0] > f2[0] and f1[1] > f2[1]) or (f1[0] >= f2[0] and f1[1] > f2[1]) or (f1[0] > f2[0] and f1[1] >= f2[1]):
+    if (f1[0] > f2[0] and f1[1] < f2[1]) or (f1[0] >= f2[0] and f1[1] < f2[1]) or (f1[0] > f2[0] and f1[1] <= f2[1]):
         return True
     return False
 
@@ -128,7 +125,7 @@ def selection(pop_size, fronts):
                 combined_list = []
                 cdlist = crowding_distance(fronts[i])
                 for j in range(len(fronts[i])):
-                    combined_list.append([cdlist[j], fronts[i][j])
+                    combined_list.append([cdlist[j], fronts[i][j]])
                 sorted_combined_list= quick_sort(combined_list)
                 cnt= 0
                 while len(new_pop) < pop_size:
