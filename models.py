@@ -2,7 +2,21 @@
 load pretrained models
 """
 import torchvision.models as models
+import torch.nn as nn
+import torch
 from PyTorch_CIFAR10 import cifar10_models
+
+class Normalize(nn.Module):
+    def __init__(self, mean, std) :
+        super(Normalize, self).__init__()
+        self.register_buffer('mean', torch.Tensor(mean))
+        self.register_buffer('std', torch.Tensor(std))
+        
+    def forward(self, input):
+        # Broadcasting
+        mean = self.mean.reshape(1, 3, 1, 1)
+        std = self.std.reshape(1, 3, 1, 1)
+        return (input - mean) / std
 
 def load_model(model_name, dataset_name ,use_cuda = True):
     """
@@ -32,6 +46,9 @@ def load_model(model_name, dataset_name ,use_cuda = True):
             model = cifar10_models.inception_v3(pretrained=True) ##         
     elif dataset_name == 'mnist':
         raise Exception('Not Implemented')
+    
+    model = nn.Sequential(Normalize(mean = [0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+                          model)
     
     if use_cuda:
         model = model.cuda()
