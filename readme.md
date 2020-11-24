@@ -1,7 +1,7 @@
 # Quick Start
 
 ```
-# if you do evaluation, the code automatically 
+# if you do evaluation, the code automatically download ImageNet, CIFAR10 dataset
 
 ## install library 
 $ pip install -r requirements.txt
