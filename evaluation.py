@@ -53,7 +53,7 @@ if __name__ == '__main__':
     from NSGA2 import run_NSGA2
     
     model = load_model('vgg16')
-    dataset = load_dataset('imagenet64')
+    dataset = load_dataset('imagenet')
     dataloader = load_dataloader(dataset)
     
     attack_success_rate, perturbation, query_cnt = evaluate(model = model, dataloader = dataloader, MOEA_algorithm = run_NSGA2)

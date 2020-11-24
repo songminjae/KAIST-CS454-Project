@@ -5,16 +5,17 @@ import numpy as np
 import cv2
 import torch
 from torchvision import transforms
-from torchvision.datasets import MNIST, CIFAR10, ImageNet
+from torchvision.datasets import MNIST, CIFAR10
+from imagenet import ImageNet
 from torch.utils.data import DataLoader
 
-def get_preprocess(size,mean,std):
-    mean = np.array(mean)[...,np.newaxis,np.newaxis]
-    std = np.array(std)[...,np.newaxis,np.newaxis]
+def get_preprocess(size,mean = 0 ,std = 1):
+    #mean = np.array(mean)[...,np.newaxis,np.newaxis]
+    #std = np.array(std)[...,np.newaxis,np.newaxis]
     def preprocess(x):
         # W,H,3 -> 3,W,H
         x = np.rollaxis(cv2.resize(x,(size,size)),-1,0)
-        x = (x - mean)/std
+        #x = (x - mean)/std
         x = torch.Tensor(x)
         return x
     return preprocess
@@ -27,10 +28,10 @@ def load_dataset(dataset_name):
     if dataset_name == 'cifar10':
         dataset = CIFAR10(root='./datasets/', train = False,transform = _transform, download=True)
     if dataset_name == 'imagenet':
-        dataset = ImageNet(root='./datasets/', train = False,transform = _transform, download=True)
+        dataset = ImageNet(root='./datasets/', split = 'val', train = False,transform = _transform, download=True)
     return dataset
 
-def load_dataloader(dataset):
+def load_dataloader(dataset, batch_size = 1):
     """
     dataloader batchsize == 1
     return W,H,3 numpy arr
@@ -42,7 +43,7 @@ def load_dataloader(dataset):
             xs.append(x)
             ys.append(y)
         return xs,ys
-    dataloader = DataLoader(dataset, batch_size=1, num_workers=4, shuffle=False,collate_fn= _collate_fn)
+    dataloader = DataLoader(dataset, batch_size= batch_size, num_workers=4, shuffle=False,collate_fn= _collate_fn)
     return dataloader
 
 if __name__ =='__main__':
@@ -65,7 +66,6 @@ if __name__ =='__main__':
         x = [give_perturbation(img) for img in x]
         x = [preprocess(img) for img in x] ## img : 3,W,H
         x = torch.stack(x,0)
-
         if use_cuda:
             x = x.cuda()
 

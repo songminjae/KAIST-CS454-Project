@@ -1,0 +1,6 @@
+pytorch==1.7.0
+torchvision==0.8.1
+torchattacks
+python-opencv
+tqdm
+https://github.com/huyvnphan/PyTorch_CIFAR10

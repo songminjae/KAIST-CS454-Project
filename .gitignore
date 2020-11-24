@@ -1,3 +1,5 @@
 /PyTorch_CIFAR10/cifar10_models/
 /PyTorch_CIFAR10/state_dicts.zip
 /datasets/
+/.ipynb_checkpoints/
+/__pycache__/
