@@ -40,8 +40,9 @@ def initialize_population(pop_size, origin_img_path):
     return init_img
 
 
-def fast_non_dominated_sort(fitness_list, final):
+def fast_non_dominated_sort(parent, fitness_list, final):
     fronts = [[]]
+    fronts_image = [[]]
     S = [[] for i in range(len(fitness_list))]
     n = [0 for i in range(len(fitness_list))]
 
@@ -56,25 +57,37 @@ def fast_non_dominated_sort(fitness_list, final):
     for p in range(len(fitness_list)):
         if n[p] == 0:
             fronts[0].append(fitness_list[p])
-    
+            fronts_image[0].append(parent[p])
+            
+    print("fronts: ", fronts)
+    print("S: ", S)
+    print("n: ", n)
     if not final:
         cnt = 0
         while (fronts[cnt]):
             next_front = []
+            next_front_image = []
             for p in fronts[cnt]:
+                print("p: ", p)
+                print("cnt: ", cnt)
+                print("front: ", fronts[cnt])
+                print("n: ", n)
                 idx_p = fitness_list.index(p)
+                print("idx_p: ", idx_p)
                 for q in S[idx_p]:
                     idx_q = fitness_list.index(q)
                     n[idx_q] = n[idx_q] - 1
                     if n[idx_q] == 0:
                         if fitness_list[idx_q] not in next_front:
                             next_front.append(fitness_list[idx_q])
+                            next_front_image.append(parent[idx_q])
             if (len(next_front) > 0):
                 fronts.append(next_front)
+                fronts_image.append(next_front_image)
                 cnt = cnt + 1
             else:
                 break
-    return fronts
+    return fronts_image
 
 
 def dominate(f1, f2):
@@ -236,7 +249,7 @@ def run_NSGA2(model, image, pop_size, n_generation, fitness_fn):
 
     iteration= 1
     parent= initialize_population(pop_size, image)
-    pareto_front= fast_non_dominated_sort(fitness(parent, model, image, fitness_fn), 0)
+    pareto_front= fast_non_dominated_sort(parent, fitness(parent, model, image, fitness_fn), 0)
     offspring= do_selection_crossover_mutation(pop_size, parent, pareto_front, image)
     # TODO: pareto_front가 현재 이미지들이 아니라 fitness value들이 들어갑니다.
     # 1. 현재 fast-nondominated-sort 함수가 fitness_list를 입력받는데,
@@ -246,11 +259,11 @@ def run_NSGA2(model, image, pop_size, n_generation, fitness_fn):
     # 3. 근데 지금 selection 함수가 애초에 잘못 짜여져 있습니다... new_pop이 pop_size보다 커져 버립니다.
     # 
     # 4. 그리고 fast-nondominated-sort 함수도 원래 그 안에 pop_size만큼의 fitness pair가 있어야 하는데
-    # 왜인지 모르겠지만 몇개가 안 들어갑니다. 다시 한번 확인해보겠습니다.
+    # -> 동일한 노이즈가 여러 개 들어가기 때문인 것 같습니다. (initialize population 함수 수정 필요)
 
     while (iteration < n_generation):
         temp= parent + offspring
-        pareto_front= fast_non_dominated_sort(fitness(temp, model, image, fitness_fn), 0)
+        pareto_front= fast_non_dominated_sort(temp, fitness(temp, model, image, fitness_fn), 0)
         parent= []
         cnt= 0
         while (len(parent) + len(pareto_front[cnt]) < pop_size):
@@ -260,7 +273,7 @@ def run_NSGA2(model, image, pop_size, n_generation, fitness_fn):
         offspring= do_selection_crossover_mutation(pop_size, parent, pareto_front, image)
         iteration= iteration + 1
 
-    return fast_non_dominated_sort(fitness(parent, model, image, fitness_fn), 1)
+    return fast_non_dominated_sort(parent, fitness(parent, model, image, fitness_fn), 1)
 
 
 def visualize(pareto_front, path):
