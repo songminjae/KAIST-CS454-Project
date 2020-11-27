@@ -2,11 +2,12 @@ import torchattacks
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from blackbox_attack.zoo_attack import zoo_attack
 from models import load_model
 from dataloader import *
 from tqdm import tqdm
 
-def get_attack(attack_method,model,eps = 8/255):
+def get_attack(attack_method,model,n_classes = 10,eps = 8/255,batch_size = 128):
     if attack_method == 'fgsm':
         return torchattacks.FGSM(model, eps = eps)
     if attack_method == 'deepfool':
@@ -28,8 +29,10 @@ def get_attack(attack_method,model,eps = 8/255):
     if attack_method == 'multiattack':
         return torchattacks.MultiAttack(model,
                                         [torchattacks.PGD(model, eps=eps, alpha=eps/4, steps=7, random_start=True)]*10)             
-
-def evaluate(model, attack_method, dataloader, eps, use_cuda = True):
+    if attack_method == 'zoo':
+        return zoo_attack(model,n_classes,batch_size)
+    
+def evaluate(model, attack_method, dataloader, eps,n_classes = 10, batch_size = 16, use_cuda = True):
     attack_success_rate = 0.
     perturbation = {
         'L0' : 0.,
@@ -39,7 +42,7 @@ def evaluate(model, attack_method, dataloader, eps, use_cuda = True):
         'Z' : 0.
     }
     
-    atk = get_attack(attack_method = attack_method, model = model, eps = eps)
+    atk = get_attack(attack_method = attack_method, model = model, n_classes = n_classes, eps = eps, batch_size = batch_size)
     ys = []
     for idx,(x,y) in enumerate(tqdm(dataloader)):
         x = [preprocess(img) for img in x]
@@ -62,6 +65,7 @@ def evaluate(model, attack_method, dataloader, eps, use_cuda = True):
         l2 = torch.norm(x - adversarial_x, p = 2)/(x.shape[0]*x.shape[1]*x.shape[2]*x.shape[3])
         l_inf = torch.norm(x - adversarial_x, p = float('inf'))
         
+        ## not implemented yet
         z = 0
         
         perturbation['L0'] += l0.item()/len(dataloader)
@@ -70,6 +74,9 @@ def evaluate(model, attack_method, dataloader, eps, use_cuda = True):
         perturbation['L_inf'] += l_inf.item()/len(dataloader)
         perturbation['Z'] += z / len(dataloader)
         
+        #print(attack_success_rate)
+        #print(l0.item(),l1.item(),l2.item(),l_inf.item())
+        
     attack_success_rate /= len(dataloader)
         
     return attack_success_rate, perturbation
@@ -77,35 +84,38 @@ def evaluate(model, attack_method, dataloader, eps, use_cuda = True):
 #adversarial_images = atk(images, labels)
 
 if __name__ == '__main__':
-    batch_size = 128
+    batch_size = 64
     
     use_cuda = True
-    #attack_methods = ['fgsm','deepfool','bim','cw','rfgsm','pgd','ffgsm','tpgd','mifgsm','multiattack']
-    attack_methods = ['fgsm']
+    attack_methods = ['fgsm','deepfool','bim','cw','rfgsm','pgd','ffgsm','tpgd','mifgsm','multiattack']
+    #attack_methods = ['fgsm','deepfool','bim','cw']
+    #attack_methods = ['zoo']
     model_names = ['vgg16','resnet50','inception_v3']
-    dataset_names = ['imagenet','cifar10'] # skip mnist
-    epss = [1/255]
-    #epss = [1/255, 2/255,4/255,8/255,16/255,32/255]
+    dataset_names = ['cifar10','imagenet'] # skip mnist
+    #dataset_names = ['cifar10']
+    #epss = [1/255]
+    epss = [1/255, 2/255,4/255,8/255,16/255]
     #epss = [8/255]
     
     for dataset_name in dataset_names:
         for model_name in model_names:
             for attack_method in attack_methods:
                 for eps in epss:
-                    
                     dataset = load_dataset(dataset_name)
                     dataloader = load_dataloader(dataset, batch_size)
                     if dataset_name == 'cifar10':
                         preprocess = get_preprocess(size = 32)
+                        n_classes = 10
                     if dataset_name == 'imagenet':
                         if model_name == 'inception_v3':
                             preprocess = get_preprocess(size = 299)
                         else:
                             preprocess = get_preprocess(size = 224)
+                        n_classes = 1000
                     model = load_model(model_name,dataset_name,use_cuda = use_cuda)
                     model.eval()
 
-                    attack_success_rate, perturbation = evaluate(model,attack_method,dataloader,eps)
+                    attack_success_rate, perturbation = evaluate(model,attack_method,dataloader,eps,n_classes)
                     
                     print(dataset_name, model_name, attack_method, eps)
                     print(attack_success_rate,perturbation)

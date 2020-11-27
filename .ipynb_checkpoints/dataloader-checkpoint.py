@@ -28,7 +28,7 @@ def load_dataset(dataset_name):
     if dataset_name == 'cifar10':
         dataset = CIFAR10(root='./datasets/', train = False,transform = _transform, download=True)
     if dataset_name == 'imagenet':
-        dataset = ImageNet(root='./datasets/', split = 'val', train = False,transform = _transform, download=True)
+        dataset = ImageNet(root='./datasets/', split = 'val',transform = _transform, download=True)
     return dataset
 
 def load_dataloader(dataset, batch_size = 1):

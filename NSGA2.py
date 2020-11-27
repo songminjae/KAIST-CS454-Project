@@ -8,7 +8,8 @@ import torch.nn.functional as F
 
 # initialize perturbations with size of pop_size, with list of random gaussian distribution
 def initialize_population(pop_size, origin_img_path):
-    img = cv2.imread(origin_img_path)[..., ::-1]/255.0  # original image
+    #img = cv2.imread(origin_img_path)[..., ::-1]/255.0  # original image
+    img = origin_img_path
     init_pop = []
     for i in range(pop_size):
         variance = np.random.normal(0, 0.5) + 1
@@ -36,7 +37,6 @@ def initialize_population(pop_size, origin_img_path):
         else:
             result = np.clip((img*(1 + x)), 0, 1)
         init_img.append(result)
-
     return init_img
 
 
@@ -179,7 +179,8 @@ def do_selection_crossover_mutation(pop_size, pop, origin_img_path):
         offs.append(new_a2)
     ###
     offs_img= []
-    origin_img= cv2.imread(origin_img_path)[..., ::-1]/255.0  # original image
+    #origin_img= cv2.imread(origin_img_path)[..., ::-1]/255.0  # original image
+    origin_img=origin_img_path
 
     for child in offs:
         offs_img.append(np.clip(origin_img + child), 0, 1)
@@ -191,7 +192,10 @@ def fitness(pop, model, image, fitness_fn):
     fitness_fn_1, fitness_fn_2= fitness_fn
     fit_1= []
     fit_2= []
-    for chromosome in enumerate(pop):
+    image = preprocess(image)
+    for chromosome in pop:
+        
+        chromosome = preprocess(chromosome)
         fit_1.append(fitness_fn_1(confidence(chromosome), confidence(image)))
         fit_2.append(fitness_fn_2(chromosome, image))
     fit_list= []
@@ -212,7 +216,8 @@ def confidence(img):
 
 
 def img_to_perturbation(img, origin_path):
-    origin_img = cv2.imread(origin_path)[..., ::-1]/255.0
+    #origin_img = cv2.imread(origin_path)[..., ::-1]/255.0
+    origin_img=origin_img_path
     assert(img.shape == origin_img.shape)
     return img - origin_img
 
@@ -270,9 +275,114 @@ def visualize(pareto_front, path):
     return
 
 
-if __name__ == '__main__':
-    from fitness import attack_fitness, perturbation_fitness
-    import cv2
+""" (FOR TESTING, TO BE ERASED)
+def attack_fitness(query_output, target_output):
+    # (list[float], list[bool]) -> float
+    ####################################################
+    ####################################################
+    ################ implement in here #################
+    ####################################################
+    ####################################################
+    y0 = target_output.argmax()
+    p_y0 = query_output[y0]
+    y1 = query_output.argmax()
+    if (y1==y0):
+        y2 = np.partition(query_output, -2)[-2]
+        p_y2 = np.where(query_output == y2)
+        return p_y2 - p_y0
 
-    pareto_front= run_NSGA2(model, image, pop_size=10, n_generation=50, fitness_fn=(
-        attack_fitness, perturbation_fitness))
+    else:
+        p_y1 = np.where(query_output == y1)
+        return p_y1 - p_y0
+def perturbation_fitness(query_image, target_image):
+    # (image, image) -> float
+    # Calculate Z-Metric(equal with -Z(A^t_i))
+    ####################################################
+    ####################################################
+    ################ implement in here #################
+    ####################################################
+    ####################################################
+    
+    #Adopted from POBA-GA paper
+    pm1 = 10
+    pm2 = 5.8
+
+    m_a, m_b, _ = target_image.shape
+    pert_image = query_image - target_image
+    pert_image.power(2)
+    pert_image.sum(dim=2)
+
+    pert_image.abs()
+    pert_image = -np.abs(pert_image) * pm1 + pm2
+    pert_image = -1/(1+np.exp(pert_image))
+    
+    return np.sum(pert_image)
+def get_preprocess(size,mean = 0 ,std = 1):
+    #mean = np.array(mean)[...,np.newaxis,np.newaxis]
+    #std = np.array(std)[...,np.newaxis,np.newaxis]
+    def preprocess(x):
+        # W,H,3 -> 3,W,H
+        x = np.rollaxis(cv2.resize(x,(size,size)),-1,0)
+        #x = (x - mean)/std
+        x = torch.Tensor(x)
+        return x
+    return preprocess
+def load_dataset(dataset_name):
+    def _transform(pil):
+        return np.array(pil).astype('float32')/255.
+    if dataset_name == 'mnist':
+        dataset = MNIST(root='./datasets/', train = False,transform = _transform, download=True)
+    if dataset_name == 'cifar10':
+        dataset = CIFAR10(root='./datasets/', train = False,transform = _transform, download=True)
+    if dataset_name == 'imagenet':
+        dataset = ImageNet(root='./datasets/', split = 'val',transform = _transform, download=True)
+    return dataset
+def load_dataloader(dataset, batch_size = 1):
+    """
+    dataloader batchsize == 1
+    return W,H,3 numpy arr
+    """
+    def _collate_fn(datas):
+        xs = []
+        ys = []
+        for x,y in datas:
+            xs.append(x)
+            ys.append(y)
+        return xs,ys
+    dataloader = DataLoader(dataset, batch_size= batch_size, num_workers=4, shuffle=False,collate_fn= _collate_fn)
+    return dataloader
+"""
+
+
+if __name__ == '__main__':
+    """ (FOR TESTING, TO BE ERASED)
+    from models import load_model
+    from torchvision import transforms
+    from torchvision.datasets import MNIST, CIFAR10
+    from imagenet import ImageNet
+    from torch.utils.data import DataLoader
+    
+    def give_perturbation(x):
+        return x
+    
+    use_cuda = True
+    dataset = load_dataset('cifar10')
+    dataloader = load_dataloader(dataset)
+    preprocess = get_preprocess(size=32,mean = [0.5,0.5,0.5],std = [0.5,0.5,0.5])
+    model = load_model('vgg16','cifar10',use_cuda = use_cuda)
+    model.eval()
+
+    """
+    #img = np.zeros((32,32,3)).astype('float32') ## 32,32,3 ndarray
+    
+    """
+    img = give_perturbation(img)
+    img = preprocess(img)
+    img = torch.Tensor(img).unsqueeze(0)
+    img = img.cuda()
+    with torch.no_grad():
+        logits = model(img)
+        prediction = F.softmax(logits,dim = -1)
+        prediction = prediction.cpu().detach().numpy()
+    """
+    pareto_front= run_NSGA2(model, img, pop_size=5, n_generation=2, fitness_fn=(attack_fitness, perturbation_fitness))
