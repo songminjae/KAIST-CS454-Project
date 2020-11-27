@@ -17,10 +17,10 @@ def attack_fitness(query_output, target_output):
     if (y1==y0):
         y2 = np.partition(query_output, -2)[-2]
         p_y2 = np.where(query_output == y2)
-        return p_y2 - p_y0
+        return (p_y2 - p_y0)[0][0]
 
     else:
-        p_y1 = np.where(query_output == y1)
+        p_y1 = y1 # np.where(query_output == y1)
         return p_y1 - p_y0
 
 
@@ -39,11 +39,11 @@ def perturbation_fitness(query_image, target_image):
 
     m_a, m_b, _ = target_image.shape
     pert_image = query_image - target_image
-    pert_image.power(2)
+    pert_image.pow(2)
     pert_image.sum(dim=2)
 
     pert_image.abs()
     pert_image = -np.abs(pert_image) * pm1 + pm2
     pert_image = -1/(1+np.exp(pert_image))
     
-    return np.sum(pert_image)
+    return np.sum(pert_image.numpy())

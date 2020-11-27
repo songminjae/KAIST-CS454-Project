@@ -30,7 +30,7 @@ def initialize_population(pop_size, origin_img_path):
         init_pop.append(noise)
     # 나중에 사용할 때, np.clip(img + noise, 0, 1)으로 visible한 이미지 만들 수 있을 듯
     init_img = []
-    for x in noise:
+    for x in range(pop_size):
         ran = np.random.rand()
         if ran < 0.5:
             result = np.clip((img + x), 0, 1)
@@ -115,26 +115,24 @@ def quick_sort(combined_list):
     return quick_sort(left) + middle + quick_sort(right)
 
 
-def selection(pop_size, fronts):
-    N = 0
+def selection(pop, pop_size, fronts):
     new_pop = []
-    while N < pop_size:
-        for i in range(len(fronts)):
-            N = N + len(fronts[i])
-            if N > pop_size:
-                combined_list = []
-                cdlist = crowding_distance(fronts[i])
-                for j in range(len(fronts[i])):
-                    combined_list.append([cdlist[j], fronts[i][j]])
-                sorted_combined_list= quick_sort(combined_list)
-                cnt= 0
-                while len(new_pop) < pop_size:
-                    new_pop.append(sorted_combined_list[cnt][1])
-                    cnt = cnt + 1
-                break
-            else:
-                new_pop.extend(fronts[i])
-
+    for i in range(len(fronts)): # 프론트 앞에서부터 순서대로 new_pop에 채워 넣는다. i = 탐색중인 프론트의 티어(0부터 시작)
+        if len(new_pop) + len(fronts[i]) > pop_size:
+            # i-티어의 프론트 안에 있는 것들을 다 넣으면 pop_size보다 커지는 경우는 앞에서 몇개만 잘라서 넣어야 한다
+            combined_list = []
+            cdlist = crowding_distance(fronts[i])
+            for j in range(len(fronts[i])):
+                combined_list.append([cdlist[j], fronts[i][j]])
+            sorted_combined_list= quick_sort(combined_list)
+            cnt= 0
+            while len(new_pop) < pop_size:
+                new_pop.append(sorted_combined_list[cnt][1])
+                cnt = cnt + 1
+            break
+        else:
+            # i-티어의 프론트 안에 있는 것들 다 집어넣어도 new_pop 안에 공간이 남으면 그냥 넣는다
+            new_pop.extend(fronts[i])
     return new_pop
 
 
@@ -158,9 +156,9 @@ def mutation(prob_m, p):
     return a
 
 
-def do_selection_crossover_mutation(pop_size, pop, origin_img_path):
+def do_selection_crossover_mutation(pop_size, pop, fronts, origin_img_path):
     offs= []
-    s_img= selection(pop)
+    s_img= selection(pop, pop_size, fronts)
     # TODO: 아래 2개 함수 입력변수 지정 필요
     # c = crossover()
     # m = mutation()
@@ -192,15 +190,17 @@ def fitness(pop, model, image, fitness_fn):
     fitness_fn_1, fitness_fn_2= fitness_fn
     fit_1= []
     fit_2= []
-    image = preprocess(image)
+    preprocessed_image = preprocess(image)
+    conf_img = confidence(preprocessed_image)
     for chromosome in pop:
-        
-        chromosome = preprocess(chromosome)
-        fit_1.append(fitness_fn_1(confidence(chromosome), confidence(image)))
-        fit_2.append(fitness_fn_2(chromosome, image))
+        conf_chr = confidence(preprocess(chromosome))
+        f1 = fitness_fn_1(conf_chr, conf_img)
+        f2 = fitness_fn_2(preprocess(chromosome), preprocessed_image)
+        fit_1.append(f1)
+        fit_2.append(f2)
     fit_list= []
-    for (a, b) in (fit_1, fit_2):
-        fit_list.append(a, b)
+    for a, b in zip(fit_1, fit_2):
+        fit_list.append([a, b])
     return fit_list
 
 
@@ -217,11 +217,9 @@ def confidence(img):
 
 def img_to_perturbation(img, origin_path):
     #origin_img = cv2.imread(origin_path)[..., ::-1]/255.0
-    origin_img=origin_img_path
-    assert(img.shape == origin_img.shape)
+    origin_img=origin_path
+    #assert(img.shape == origin_img.shape)
     return img - origin_img
-
-
 
 
 def run_NSGA2(model, image, pop_size, n_generation, fitness_fn):
@@ -239,7 +237,16 @@ def run_NSGA2(model, image, pop_size, n_generation, fitness_fn):
     iteration= 1
     parent= initialize_population(pop_size, image)
     pareto_front= fast_non_dominated_sort(fitness(parent, model, image, fitness_fn), 0)
-    offspring= do_selection_crossover_mutation(pop_size, parent, image) # TODO
+    offspring= do_selection_crossover_mutation(pop_size, parent, pareto_front, image)
+    # TODO: pareto_front가 현재 이미지들이 아니라 fitness value들이 들어갑니다.
+    # 1. 현재 fast-nondominated-sort 함수가 fitness_list를 입력받는데,
+    # population도 같이 입력받아서 계산은 fitness_list로 하고, return값을 fitness로 구성된 프론트 대신 이미지 배열들의 프론트를 만듭니다.
+    # 2. 그 다음 selection에서 population front & fitness front를 함께 집어넣어서
+    # 역시 마찬가지로 계산은 fitness 프론트로 하되 index만 따와서 실제 return값은 이미지 배열들로 구성합니다.
+    # 3. 근데 지금 selection 함수가 애초에 잘못 짜여져 있습니다... new_pop이 pop_size보다 커져 버립니다.
+    # 
+    # 4. 그리고 fast-nondominated-sort 함수도 원래 그 안에 pop_size만큼의 fitness pair가 있어야 하는데
+    # 왜인지 모르겠지만 몇개가 안 들어갑니다. 다시 한번 확인해보겠습니다.
 
     while (iteration < n_generation):
         temp= parent + offspring
@@ -250,7 +257,7 @@ def run_NSGA2(model, image, pop_size, n_generation, fitness_fn):
             parent= parent + pareto_front[cnt]
             cnt= cnt + 1
         parent= parent + pareto_front[cnt][:(pop_size - len(parent))]
-        offspring= do_selection_crossover_mutation(pop_size, parent, image)
+        offspring= do_selection_crossover_mutation(pop_size, parent, pareto_front, image)
         iteration= iteration + 1
 
     return fast_non_dominated_sort(fitness(parent, model, image, fitness_fn), 1)
@@ -275,7 +282,7 @@ def visualize(pareto_front, path):
     return
 
 
-""" (FOR TESTING, TO BE ERASED)
+
 def attack_fitness(query_output, target_output):
     # (list[float], list[bool]) -> float
     ####################################################
@@ -289,10 +296,10 @@ def attack_fitness(query_output, target_output):
     if (y1==y0):
         y2 = np.partition(query_output, -2)[-2]
         p_y2 = np.where(query_output == y2)
-        return p_y2 - p_y0
+        return (p_y2 - p_y0)[0][0]
 
     else:
-        p_y1 = np.where(query_output == y1)
+        p_y1 = y1 #np.where(query_output == y1)
         return p_y1 - p_y0
 def perturbation_fitness(query_image, target_image):
     # (image, image) -> float
@@ -309,14 +316,14 @@ def perturbation_fitness(query_image, target_image):
 
     m_a, m_b, _ = target_image.shape
     pert_image = query_image - target_image
-    pert_image.power(2)
+    pert_image.pow(2)
     pert_image.sum(dim=2)
 
     pert_image.abs()
     pert_image = -np.abs(pert_image) * pm1 + pm2
     pert_image = -1/(1+np.exp(pert_image))
     
-    return np.sum(pert_image)
+    return np.sum(pert_image.numpy())
 def get_preprocess(size,mean = 0 ,std = 1):
     #mean = np.array(mean)[...,np.newaxis,np.newaxis]
     #std = np.array(std)[...,np.newaxis,np.newaxis]
@@ -351,11 +358,10 @@ def load_dataloader(dataset, batch_size = 1):
         return xs,ys
     dataloader = DataLoader(dataset, batch_size= batch_size, num_workers=4, shuffle=False,collate_fn= _collate_fn)
     return dataloader
-"""
+
 
 
 if __name__ == '__main__':
-    """ (FOR TESTING, TO BE ERASED)
     from models import load_model
     from torchvision import transforms
     from torchvision.datasets import MNIST, CIFAR10
@@ -372,8 +378,7 @@ if __name__ == '__main__':
     model = load_model('vgg16','cifar10',use_cuda = use_cuda)
     model.eval()
 
-    """
-    #img = np.zeros((32,32,3)).astype('float32') ## 32,32,3 ndarray
+    img = np.zeros((32,32,3)).astype('float32') ## 32,32,3 ndarray
     
     """
     img = give_perturbation(img)
@@ -385,4 +390,4 @@ if __name__ == '__main__':
         prediction = F.softmax(logits,dim = -1)
         prediction = prediction.cpu().detach().numpy()
     """
-    pareto_front= run_NSGA2(model, img, pop_size=5, n_generation=2, fitness_fn=(attack_fitness, perturbation_fitness))
+    pareto_front= run_NSGA2(model, img, pop_size=6, n_generation=1, fitness_fn=(attack_fitness, perturbation_fitness))
