@@ -7,31 +7,25 @@ import torch.nn.functional as F
 
 
 # initialize perturbations with size of pop_size, with list of random gaussian distribution
-def initialize_population(pop_size, origin_img_path):
-    # img = cv2.imread(origin_img_path)[..., ::-1]/255.0  # original image
-    img = origin_img_path
+def initialize_population(pop_size, img):
     init_pop = []
     for i in range(pop_size):
         variance = np.random.normal(0, 1) + 1
         variance = np.clip(variance, 0, 2)
-        print("this is variance", variance)
+
         noise = np.random.normal(
             0, variance, size=img.shape)  # varies variance when picking noise
         noise = noise * 0.03  # 여기 곱하는 수가 작아질 수록 원래 이미지와 비슷한 경향이 있음
-        print("this is initial noise", noise[0][0])
         random_matrix = np.random.rand(
             img.shape[0], img.shape[1], img.shape[2])
-
-        print("this is random matrix", random_matrix[0][0])
 
         for i in range(len(random_matrix)):
             for j in range(len(random_matrix[i])):
                 for k in range(len(random_matrix[i][j])):
                     if random_matrix[i][j][k] < 0.5:
                         noise[i][j][k] = 0.0
-        print("this is noise filtered", noise[0][0])
         init_pop.append(noise)
-    # 나중에 사용할 때, np.clip(img + noise, 0, 1)으로 visible한 이미지 만들 수 있을 듯
+
     init_img = []
 
     for x in init_pop:
@@ -41,7 +35,7 @@ def initialize_population(pop_size, origin_img_path):
         else:
             result = np.clip((img*(1 + x)), 0, 1)
         init_img.append(result)
-        print("this is what put into result", result[0][0])
+        print("this is what put into result", result[0])
     return init_img
 
 
@@ -155,6 +149,17 @@ def selection(pop, pop_size, fronts):
     return new_pop
 
 
+'''
+###input:
+    prob_c = [0,1]
+    p1 = (32,32,3) shape, 각 value 는 [0,1]
+    p2 = p1과 동일
+###output:
+    a1_cross = (32,32,3) shape, 각 value 는 [0,1]
+    a2_cross = a1_cross 와 동일
+'''
+
+
 def crossover(prob_c, p1, p2):  # input of 2 different perturbation with np.array
     a1, a2 = np.array(p1), np.array(p2)
     assert a1.shape == a2.shape
@@ -162,6 +167,15 @@ def crossover(prob_c, p1, p2):  # input of 2 different perturbation with np.arra
     b_not = np.ones(a1.shape, int) - b
     a1_cross, a2_cross = a1 * b + a2 * b_not, a1 * b_not + a2 * b
     return a1_cross, a2_cross
+
+
+'''
+###input:
+    prob_m = [0,1]
+    p = (32,32,3) shaep, 각 value 는 [0,1]
+###output:
+    a = (32,32,3) shaep, 각 value 는 [0,1]
+'''
 
 
 def mutation(prob_m, p):
@@ -175,7 +189,7 @@ def mutation(prob_m, p):
     return a
 
 
-def do_selection_crossover_mutation(pop_size, pop, fronts, origin_img_path):
+def do_selection_crossover_mutation(pop_size, pop, fronts, origin_img):
     offs = []
     s_img = selection(pop, pop_size, fronts)
     # TODO: 아래 2개 함수 입력변수 지정 필요
@@ -183,7 +197,7 @@ def do_selection_crossover_mutation(pop_size, pop, fronts, origin_img_path):
     # m = mutation()
     s = []
     for x in s_img:
-        s.append(img_to_perturbation(x, origin_img_path))
+        s.append(img_to_perturbation(x, origin_img))
 
     # pop_size는 무조건 짝수여야함!!!!
     for i in range(len(s)/2):
@@ -196,8 +210,6 @@ def do_selection_crossover_mutation(pop_size, pop, fronts, origin_img_path):
         offs.append(new_a2)
     ###
     offs_img = []
-    # origin_img= cv2.imread(origin_img_path)[..., ::-1]/255.0  # original image
-    origin_img = origin_img_path
 
     for child in offs:
         offs_img.append(np.clip(origin_img + child), 0, 1)
@@ -234,10 +246,7 @@ def confidence(img):
     return prediction[0]
 
 
-def img_to_perturbation(img, origin_path):
-    #origin_img = cv2.imread(origin_path)[..., ::-1]/255.0
-    origin_img = origin_path
-    #assert(img.shape == origin_img.shape)
+def img_to_perturbation(img, origin_img):
     return img - origin_img
 
 
