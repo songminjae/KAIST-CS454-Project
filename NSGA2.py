@@ -35,10 +35,10 @@ def initialize_population(pop_size, img):
         else:
             result = np.clip((img*(1 + x)), 0, 1)
         init_img.append(result)
-        print("this is what put into result", result[0])
     return init_img
 
 
+# a malfunction may occur if any two of the noises are exactly same
 def fast_non_dominated_sort(parent, fitness_list, final):
     fronts = [[]]
     fronts_image = [[]]
@@ -58,21 +58,13 @@ def fast_non_dominated_sort(parent, fitness_list, final):
             fronts[0].append(fitness_list[p])
             fronts_image[0].append(parent[p])
 
-    print("fronts: ", fronts)
-    print("S: ", S)
-    print("n: ", n)
     if not final:
         cnt = 0
         while (fronts[cnt]):
             next_front = []
             next_front_image = []
             for p in fronts[cnt]:
-                print("p: ", p)
-                print("cnt: ", cnt)
-                print("front: ", fronts[cnt])
-                print("n: ", n)
                 idx_p = fitness_list.index(p)
-                print("idx_p: ", idx_p)
                 for q in S[idx_p]:
                     idx_q = fitness_list.index(q)
                     n[idx_q] = n[idx_q] - 1
@@ -86,7 +78,7 @@ def fast_non_dominated_sort(parent, fitness_list, final):
                 cnt = cnt + 1
             else:
                 break
-    return fronts_image
+    return fronts, fronts_image
 
 
 def dominate(f1, f2):
@@ -128,15 +120,14 @@ def quick_sort(combined_list):
     return quick_sort(left) + middle + quick_sort(right)
 
 
-def selection(pop, pop_size, fronts):
+def selection(pop_size, fronts, fronts_image):
     new_pop = []
-    for i in range(len(fronts)):  # 프론트 앞에서부터 순서대로 new_pop에 채워 넣는다. i = 탐색중인 프론트의 티어(0부터 시작)
+    for i in range(len(fronts)):
         if len(new_pop) + len(fronts[i]) > pop_size:
-            # i-티어의 프론트 안에 있는 것들을 다 넣으면 pop_size보다 커지는 경우는 앞에서 몇개만 잘라서 넣어야 한다
             combined_list = []
             cdlist = crowding_distance(fronts[i])
             for j in range(len(fronts[i])):
-                combined_list.append([cdlist[j], fronts[i][j]])
+                combined_list.append([cdlist[j], fronts_image[i][j]])
             sorted_combined_list = quick_sort(combined_list)
             cnt = 0
             while len(new_pop) < pop_size:
@@ -144,8 +135,7 @@ def selection(pop, pop_size, fronts):
                 cnt = cnt + 1
             break
         else:
-            # i-티어의 프론트 안에 있는 것들 다 집어넣어도 new_pop 안에 공간이 남으면 그냥 넣는다
-            new_pop.extend(fronts[i])
+            new_pop.extend(fronts_image[i])
     return new_pop
 
 
@@ -189,18 +179,15 @@ def mutation(prob_m, p):
     return a
 
 
-def do_selection_crossover_mutation(pop_size, pop, fronts, origin_img):
+def do_selection_crossover_mutation(pop_size, fronts, fronts_image, origin_img):
     offs = []
-    s_img = selection(pop, pop_size, fronts)
-    # TODO: 아래 2개 함수 입력변수 지정 필요
-    # c = crossover()
-    # m = mutation()
+    s_img = selection(pop_size, fronts, fronts_image)
     s = []
     for x in s_img:
         s.append(img_to_perturbation(x, origin_img))
 
     # pop_size는 무조건 짝수여야함!!!!
-    for i in range(len(s)/2):
+    for i in range(len(s)//2):
         a1 = s[2*i]
         a2 = s[2*i + 1]
         new_a1, new_a2 = crossover(0.5, a1, a2)  # HP hyperparameter prob_c
@@ -212,7 +199,7 @@ def do_selection_crossover_mutation(pop_size, pop, fronts, origin_img):
     offs_img = []
 
     for child in offs:
-        offs_img.append(np.clip(origin_img + child), 0, 1)
+        offs_img.append(np.clip((origin_img + child), 0, 1))
 
     return offs_img
 
@@ -260,43 +247,32 @@ def run_NSGA2(model, image, pop_size, n_generation, fitness_fn):
     + MJ : image 를 origin image 의 Path로 하는게 좋을 것 같음
     """
 
-    pareto_front = []
-
     iteration = 1
 
     parent = initialize_population(pop_size, image)
-    pareto_front = fast_non_dominated_sort(
+    pareto_front, pareto_front_image = fast_non_dominated_sort(
         parent, fitness(parent, model, image, fitness_fn), 0)
     offspring = do_selection_crossover_mutation(
-        pop_size, parent, pareto_front, image)
-    # TODO: pareto_front가 현재 이미지들이 아니라 fitness value들이 들어갑니다.
-    # 1. 현재 fast-nondominated-sort 함수가 fitness_list를 입력받는데,
-    # population도 같이 입력받아서 계산은 fitness_list로 하고, return값을 fitness로 구성된 프론트 대신 이미지 배열들의 프론트를 만듭니다.
-    # 2. 그 다음 selection에서 population front & fitness front를 함께 집어넣어서
-    # 역시 마찬가지로 계산은 fitness 프론트로 하되 index만 따와서 실제 return값은 이미지 배열들로 구성합니다.
-    # 3. 근데 지금 selection 함수가 애초에 잘못 짜여져 있습니다... new_pop이 pop_size보다 커져 버립니다.
-    #
-    # 4. 그리고 fast-nondominated-sort 함수도 원래 그 안에 pop_size만큼의 fitness pair가 있어야 하는데
-    # -> 동일한 노이즈가 여러 개 들어가기 때문인 것 같습니다. (initialize population 함수 수정 필요)
+        pop_size, pareto_front, pareto_front_image, image)
 
     while (iteration < n_generation):
         temp = parent + offspring
-        pareto_front = fast_non_dominated_sort(
+        pareto_front, pareto_front_image = fast_non_dominated_sort(
             temp, fitness(temp, model, image, fitness_fn), 0)
         parent = []
         cnt = 0
-        while (len(parent) + len(pareto_front[cnt]) < pop_size):
-            parent = parent + pareto_front[cnt]
+        while (len(parent) + len(pareto_front_image[cnt]) < pop_size):
+            parent = parent + pareto_front_image[cnt]
             cnt = cnt + 1
-        parent = parent + pareto_front[cnt][:(pop_size - len(parent))]
+        parent = parent + pareto_front_image[cnt][:(pop_size - len(parent))]
         offspring = do_selection_crossover_mutation(
-            pop_size, parent, pareto_front, image)
+            pop_size, pareto_front, pareto_front_image, image)
         iteration = iteration + 1
 
     return fast_non_dominated_sort(parent, fitness(parent, model, image, fitness_fn), 1)
 
 
-def visualize(pareto_front, path):
+def visualize(pareto_front):
     """
     pareto front를 이미지 파일로 저장한다.
     """
@@ -313,6 +289,9 @@ def visualize(pareto_front, path):
     plt.savefig('fronts.png', bbox_inches='tight')
 
     return
+
+
+""" [FOR TEST, TO BE ERASED]
 
 
 def attack_fitness(query_output, target_output):
@@ -402,6 +381,9 @@ def load_dataloader(dataset, batch_size=1):
     dataloader = DataLoader(dataset, batch_size=batch_size,
                             num_workers=4, shuffle=False, collate_fn=_collate_fn)
     return dataloader
+
+
+[FOR TEST, TO BE ERASED] """
 
 
 if __name__ == '__main__':
