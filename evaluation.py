@@ -1,5 +1,6 @@
 query_cnt = 0
 from fitness import *
+from tqdm import tqdm
 import torch
 
 def evaluate(model, dataloader, MOEA_algorithm):
@@ -36,7 +37,7 @@ def evaluate(model, dataloader, MOEA_algorithm):
 
     cnt = 0
     
-    for data in dataloader:
+    for data in tqdm(dataloader):
         z_status.reset()
         result_fit, result_img = MOEA_algorithm(model, data[0][0], pop_size, n_generation, fitness_fn)
         result = result_fit[0]
