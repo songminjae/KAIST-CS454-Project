@@ -1,6 +1,5 @@
-from fitness import attack_fitness, perturbation_fitness
-
 query_cnt = 0
+from fitness import attack_fitness, perturbation_fitness, z_status
 
 def evaluate(model, dataloader, MOEA_algorithm):
     """
@@ -9,6 +8,7 @@ def evaluate(model, dataloader, MOEA_algorithm):
     해당 데이터 셋에 대한 평균 attack success rate, perturbation, query_cnt를 구한다.
     
     """
+    global query_cnt
     
     attack_success_rate = 0.
     perturbation = {
@@ -35,6 +35,7 @@ def evaluate(model, dataloader, MOEA_algorithm):
     cnt = 0
     
     for data in dataloader:
+        z_status.reset()
         result = MOEA_algorithm(model, data, pop_size, n_generation, fitness_fn)
         for res in result:
             cnt+=1
@@ -52,7 +53,7 @@ if __name__ == '__main__':
     from dataloader import load_dataset, load_dataloader 
     from NSGA2 import run_NSGA2
     
-    model = load_model('vgg16')
+    model = load_model('vgg16', 'cifar10')
     dataset = load_dataset('imagenet')
     dataloader = load_dataloader(dataset)
     

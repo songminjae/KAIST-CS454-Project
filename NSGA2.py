@@ -3,6 +3,8 @@ import cv2
 import matplotlib.pyplot as plt
 import torch
 import torch.nn.functional as F
+from fitness import z_status, calculate_Z0, attack_fitness, perturbation_fitness
+from evaluation import query_cnt
 # how about number of noise point, nois point size? How?
 
 
@@ -205,9 +207,12 @@ def do_selection_crossover_mutation(pop_size, fronts, fronts_image, origin_img):
 
 
 def fitness(pop, model, image, fitness_fn):
+    global query_cnt
     fitness_fn_1, fitness_fn_2 = fitness_fn
     fit_1 = []
     fit_2 = []
+    before_flag = z_status.Z0_flag
+
     preprocessed_image = preprocess(image)
     conf_img = confidence(preprocessed_image)
     for chromosome in pop:
@@ -216,6 +221,10 @@ def fitness(pop, model, image, fitness_fn):
         f2 = fitness_fn_2(preprocess(chromosome), preprocessed_image)
         fit_1.append(f1)
         fit_2.append(f2)
+    if (before_flag == 0 and z_status.Z0_flag == 1):
+        calculate_Z0(pop, preprocessed_image, preprocess)
+        return fitness(pop, model, image, fitness_fn)
+    query_cnt+=len(pop)
     fit_list = []
     for a, b in zip(fit_1, fit_2):
         fit_list.append([a, b])
@@ -367,10 +376,10 @@ def load_dataset(dataset_name):
 
 
 def load_dataloader(dataset, batch_size=1):
-    """
+
     dataloader batchsize == 1
     return W,H,3 numpy arr
-    """
+
     def _collate_fn(datas):
         xs = []
         ys = []
@@ -392,7 +401,7 @@ if __name__ == '__main__':
     from torchvision.datasets import MNIST, CIFAR10
     from imagenet import ImageNet
     from torch.utils.data import DataLoader
-
+    from dataloader import *
     def give_perturbation(x):
         return x
 
