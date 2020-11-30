@@ -213,10 +213,11 @@ def fitness(pop, model, image, fitness_fn):
     fit_2 = []
     before_flag = z_status.Z0_flag
 
+    preprocess = get_preprocess(size=32, mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
     preprocessed_image = preprocess(image)
-    conf_img = confidence(preprocessed_image)
+    conf_img = confidence(model, preprocessed_image)
     for chromosome in pop:
-        conf_chr = confidence(preprocess(chromosome))
+        conf_chr = confidence(model, preprocess(chromosome))
         f1 = fitness_fn_1(conf_chr, conf_img)
         f2 = fitness_fn_2(preprocess(chromosome), preprocessed_image)
         fit_1.append(f1)
@@ -231,7 +232,7 @@ def fitness(pop, model, image, fitness_fn):
     return fit_list
 
 
-def confidence(img):
+def confidence(model, img):
     img = torch.Tensor(img).unsqueeze(0)
     img = img.cuda()
     with torch.no_grad():
@@ -348,18 +349,6 @@ def perturbation_fitness(query_image, target_image):
     return np.sum(pert_image.numpy())
 
 
-def get_preprocess(size, mean=0, std=1):
-    #mean = np.array(mean)[...,np.newaxis,np.newaxis]
-    #std = np.array(std)[...,np.newaxis,np.newaxis]
-    def preprocess(x):
-        # W,H,3 -> 3,W,H
-        x = np.rollaxis(cv2.resize(x, (size, size)), -1, 0)
-        #x = (x - mean)/std
-        x = torch.Tensor(x)
-        return x
-    return preprocess
-
-
 def load_dataset(dataset_name):
     def _transform(pil):
         return np.array(pil).astype('float32')/255.
@@ -395,6 +384,18 @@ def load_dataloader(dataset, batch_size=1):
 [FOR TEST, TO BE ERASED] """
 
 
+def get_preprocess(size, mean=0, std=1):
+    #mean = np.array(mean)[...,np.newaxis,np.newaxis]
+    #std = np.array(std)[...,np.newaxis,np.newaxis]
+    def preprocess(x):
+        # W,H,3 -> 3,W,H
+        x = np.rollaxis(cv2.resize(x, (size, size)), -1, 0)
+        #x = (x - mean)/std
+        x = torch.Tensor(x)
+        return x
+    return preprocess
+
+
 if __name__ == '__main__':
     from models import load_model
     from torchvision import transforms
@@ -427,5 +428,6 @@ if __name__ == '__main__':
         prediction = F.softmax(logits,dim = -1)
         prediction = prediction.cpu().detach().numpy()
     """
-    pareto_front = run_NSGA2(model, img, pop_size=6, n_generation=2, fitness_fn=(
+    pareto_front, pareto_front_image = run_NSGA2(model, img, pop_size=6, n_generation=2, fitness_fn=(
         attack_fitness, perturbation_fitness))
+    visualize(pareto_front)

@@ -36,7 +36,8 @@ def evaluate(model, dataloader, MOEA_algorithm):
     
     for data in dataloader:
         z_status.reset()
-        result = MOEA_algorithm(model, data, pop_size, n_generation, fitness_fn)
+        result_fit, result_img = MOEA_algorithm(model, data[0][0], pop_size, n_generation, fitness_fn)
+        result = result_fit[0]
         for res in result:
             cnt+=1
             a, b = res
