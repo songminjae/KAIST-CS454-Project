@@ -66,7 +66,6 @@ def perturbation_fitness(query_image, target_image):
     ################ implement in here #################
     ####################################################
     ####################################################
-
     if (z_status.Z0_flag==0):
         return 0
 
@@ -84,19 +83,18 @@ def perturbation_fitness(query_image, target_image):
 
 def L0_fitness(query_image, target_image):
     pert_image = query_image - target_image
-    return np.linalg.norm(pert_image, 0)
+    return np.sum(np.linalg.norm(pert_image, 0, 0))
 
 
 def L1_fitness(query_image, target_image):
     pert_image = query_image - target_image
-    return np.linalg.norm(pert_image, 1)
-
+    return np.sum(np.linalg.norm(pert_image, 1, 0))
 
 def L2_fitness(query_image, target_image):
     pert_image = query_image - target_image
-    return np.linalg.norm(pert_image, 2)
+    return np.sum(np.linalg.norm(pert_image, 2, 0))
 
 
 def Linf_fitness(query_image, target_image):
     pert_image = query_image - target_image
-    return np.linalg.norm(pert_image, np.inf)
+    return np.sum(np.linalg.norm(pert_image, np.inf, 0))

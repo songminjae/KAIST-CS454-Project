@@ -1,5 +1,6 @@
 query_cnt = 0
-from fitness import attack_fitness, perturbation_fitness, z_status
+from fitness import *
+import torch
 
 def evaluate(model, dataloader, MOEA_algorithm):
     """
@@ -16,7 +17,8 @@ def evaluate(model, dataloader, MOEA_algorithm):
         'L1' : 0.,
         'L2' : 0.,
         'L_inf' : 0.,
-        'Z' : 0.
+        'Z' : 0.,
+        'Z_attack' : 0
     }
     query_cnt = 0
     
@@ -42,10 +44,19 @@ def evaluate(model, dataloader, MOEA_algorithm):
             cnt+=1
             a, b = res
             attack_success_rate += a
-            perturbation += b
-    
+            perturbation['Z_attack'] = perturbation['Z_attack'] + b
+            perturbation['L0'] = perturbation['L0'] + L0_fitness(result_img[0][0], data[0][0])
+            perturbation['L1'] = perturbation['L1'] + L1_fitness(result_img[0][0], data[0][0])
+            perturbation['L2'] = perturbation['L2'] + L2_fitness(result_img[0][0], data[0][0])
+            perturbation['L_inf'] = perturbation['L_inf'] + Linf_fitness(result_img[0][0], data[0][0])
+            perturbation['Z'] = perturbation['Z'] + perturbation_fitness(torch.from_numpy(result_img[0][0]), data[0][0])        
     attack_success_rate/=cnt
-    perturbation/=cnt
+    perturbation['Z_attack']/=cnt
+    perturbation['Z']/=cnt
+    perturbation['L0']/=cnt
+    perturbation['L1']/=cnt
+    perturbation['L2']/=cnt
+    perturbation['L_inf']/=cnt
 
     return attack_success_rate, perturbation, query_cnt
 
@@ -59,3 +70,6 @@ if __name__ == '__main__':
     dataloader = load_dataloader(dataset)
     
     attack_success_rate, perturbation, query_cnt = evaluate(model = model, dataloader = dataloader, MOEA_algorithm = run_NSGA2)
+    print(attack_success_rate)
+    print(perturbation)
+    print(query_cnt)
