@@ -80,3 +80,23 @@ def perturbation_fitness(query_image, target_image):
     pert_image = (1/(1+np.exp(pert_image)) - 1/(1+np.exp(pm2)))
     
     return np.sum(pert_image.numpy()) * z_status.multiplier
+
+
+def L0_fitness(query_image, target_image):
+    pert_image = query_image - target_image
+    return np.linalg.norm(pert_image, 0)
+
+
+def L1_fitness(query_image, target_image):
+    pert_image = query_image - target_image
+    return np.linalg.norm(pert_image, 1)
+
+
+def L2_fitness(query_image, target_image):
+    pert_image = query_image - target_image
+    return np.linalg.norm(pert_image, 2)
+
+
+def Linf_fitness(query_image, target_image):
+    pert_image = query_image - target_image
+    return np.linalg.norm(pert_image, np.inf)
