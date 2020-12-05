@@ -41,21 +41,46 @@ def initialize_population(pop_size, img):
     return init_img
 
 
+def dominate(f1, f2):
+    if (f1[0] > f2[0] and f1[1] < f2[1]) or (f1[0] >= f2[0] and f1[1] < f2[1]) or (f1[0] > f2[0] and f1[1] <= f2[1]):
+        return True
+    return False
+
+
+def quick_sort(combined_list):
+    if len(combined_list) <= 1:
+        return combined_list
+    pivot = len(combined_list) // 2
+    left, middle, right = [], [], []
+    for i in range(len(combined_list)):
+        if dominate(combined_list[i][0], combined_list[pivot][0]):
+            left.append((combined_list[i]))
+        elif dominate(combined_list[pivot][0], combined_list[i][0]):
+            right.append((combined_list[i]))
+        else:
+            middle.append((combined_list[i]))
+    return quick_sort(left) + middle + quick_sort(right)
+
+
 def selection(pop_size, pop, fit_list):
     n = pop_size
     new_pop = []
-    fit_wsum = []
-    for elem in fit_list:
-        fit_wsum.append(1 / abs(elem[0]+elem[1]))
-    total = float(sum(fit_wsum))
+    combined_list = []
+    for i in range(len(pop)):
+        combined_list.append([fit_list[i], pop[i]])
+    sorted_combined_list = quick_sort(combined_list)
+    weight_list = []
+    for i in range(len(pop)):
+        weight_list.append(1 / (1 + (i / 2)))
+    total = float(sum(weight_list))
     while n:
         threshold = random.uniform(0, total)
         temp = 0
         cnt = 0
-        for fit in fit_wsum:
-            temp += fit
+        for w in weight_list:
+            temp += w
             if temp > threshold:
-                new_pop.append(pop[cnt])
+                new_pop.append(sorted_combined_list[cnt][1])
                 n -= 1
                 break
             cnt += 1

@@ -274,6 +274,8 @@ def run_NSGA2(model, image, pop_size, n_generation, fitness_fn):
         while (len(parent) + len(pareto_front_image[cnt]) < pop_size):
             parent = parent + pareto_front_image[cnt]
             cnt = cnt + 1
+            if cnt >= len(pareto_front_image)-1:
+                break
         parent = parent + pareto_front_image[cnt][:(pop_size - len(parent))]
         offspring = do_selection_crossover_mutation(
             pop_size, pareto_front, pareto_front_image, image)
