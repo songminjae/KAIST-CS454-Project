@@ -3,6 +3,7 @@ import cv2
 import matplotlib.pyplot as plt
 import torch
 import torch.nn.functional as F
+import random
 from fitness import z_status, calculate_Z0, attack_fitness, perturbation_fitness
 from evaluation import query_cnt
 # how about number of noise point, nois point size? How?
@@ -41,23 +42,23 @@ def initialize_population(pop_size, img):
 
 
 def selection(pop_size, pop, fit_list):
+    n = pop_size
     new_pop = []
     fit_wsum = []
     for elem in fit_list:
-        fit_wsum.append(elem[0]+elem[1])
+        fit_wsum.append(1 / abs(elem[0]+elem[1]))
     total = float(sum(fit_wsum))
-    i = 0
-    w, v = fit_wsum[0], pop[0]
-    while pop_size:
-        x = total * (1 - np.random.random() ** (1.0 / pop_size))
-        total -= x
-        while x > w:
-            x -= w
-            i += 1
-            w, v = fit_wsum[i], pop[i]
-        w -= x
-        new_pop.append(v)
-        pop_size -= 1
+    while n:
+        threshold = random.uniform(0, total)
+        temp = 0
+        cnt = 0
+        for fit in fit_wsum:
+            temp += fit
+            if temp > threshold:
+                new_pop.append(pop[cnt])
+                n -= 1
+                break
+            cnt += 1
     return new_pop
 
 
@@ -173,10 +174,11 @@ def run_POBA_GA(model, image, pop_size, n_generation, fitness_fn):
     p = initialize_population(pop_size, image)
 
     while (iteration < n_generation):
-        p = do_selection_crossover_mutation(pop_size, p, fitness(p, model, image, fitness_fn), image)
+        f = fitness(p, model, image, fitness_fn)
+        p = do_selection_crossover_mutation(pop_size, p, f, image)
         iteration = iteration + 1
 
-    return p
+    return f, p
 
 
 """ [FOR TEST, TO BE ERASED]
@@ -322,6 +324,7 @@ if __name__ == '__main__':
         prediction = F.softmax(logits,dim = -1)
         prediction = prediction.cpu().detach().numpy()
     """
-    new_pop = run_POBA_GA(model, img, pop_size=6, n_generation=2, fitness_fn=(
+    fit_list, new_pop = run_POBA_GA(model, img, pop_size=6, n_generation=2, fitness_fn=(
         attack_fitness, perturbation_fitness))
+    print(fit_list)
     print(new_pop)
