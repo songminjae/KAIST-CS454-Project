@@ -287,7 +287,9 @@ def run_NSGA2(model, image, pop_size, n_generation, fitness_fn, checkpoints=[]):
             history.append(fast_non_dominated_sort(parent, fitness(parent, model, image, fitness_fn), 1))
         
     if (len(checkpoints) == 0): return fast_non_dominated_sort(parent, fitness(parent, model, image, fitness_fn), 1)
-    else: return history
+    else:
+        history.append(fast_non_dominated_sort(parent, fitness(parent, model, image, fitness_fn), 1))
+        return history
 
 
 def visualize(pareto_front):

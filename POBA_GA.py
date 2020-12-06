@@ -207,7 +207,9 @@ def run_POBA_GA(model, image, pop_size, n_generation, fitness_fn, checkpoints=[]
         if (iteration in checkpoints and iteration != n_generation): history.append((f, p))
 
     if (len(checkpoints) == 0): return f, p
-    else: return history
+    else:
+        history.append((f, p))
+        return history
 
 
 """ [FOR TEST, TO BE ERASED]
