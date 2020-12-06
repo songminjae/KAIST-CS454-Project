@@ -84,7 +84,7 @@ def fast_non_dominated_sort(parent, fitness_list, final):
 
 
 def dominate(f1, f2):
-    if (f1[0] > f2[0] and f1[1] < f2[1]) or (f1[0] >= f2[0] and f1[1] < f2[1]) or (f1[0] > f2[0] and f1[1] <= f2[1]):
+    if (f1[0] > f2[0] and f1[1] > f2[1]) or (f1[0] >= f2[0] and f1[1] > f2[1]) or (f1[0] > f2[0] and f1[1] >= f2[1]):
         return True
     return False
 
@@ -247,7 +247,7 @@ def img_to_perturbation(img, origin_img):
     return img - origin_img
 
 
-def run_NSGA2(model, image, pop_size, n_generation, fitness_fn):
+def run_NSGA2(model, image, pop_size, n_generation, fitness_fn, checkpoints=[]):
     """
     하나의 이미지가 들어왔을 때 NSGA2 알고리즘을 활용하여 2개의 fitness function에 대한 pareto-front를 구한다.
     위의 initialize_population, fast_non_dominated_sort, crowding_distance, crossover, mutation 등의 논문의 함수를 구현하여 사용한다.
@@ -258,12 +258,15 @@ def run_NSGA2(model, image, pop_size, n_generation, fitness_fn):
     """
 
     iteration = 1
+    history=[]
 
     parent = initialize_population(pop_size, image)
     pareto_front, pareto_front_image = fast_non_dominated_sort(
         parent, fitness(parent, model, image, fitness_fn), 0)
     offspring = do_selection_crossover_mutation(
         pop_size, pareto_front, pareto_front_image, image)
+    if (1 in checkpoints and 1 != n_generation):
+        history.append(fast_non_dominated_sort(parent, fitness(parent, model, image, fitness_fn), 1))
 
     while (iteration < n_generation):
         temp = parent + offspring
@@ -280,8 +283,11 @@ def run_NSGA2(model, image, pop_size, n_generation, fitness_fn):
         offspring = do_selection_crossover_mutation(
             pop_size, pareto_front, pareto_front_image, image)
         iteration = iteration + 1
-
-    return fast_non_dominated_sort(parent, fitness(parent, model, image, fitness_fn), 1)
+        if (iteration in checkpoints):
+            history.append(fast_non_dominated_sort(parent, fitness(parent, model, image, fitness_fn), 1))
+        
+    if (len(checkpoints) == 0): return fast_non_dominated_sort(parent, fitness(parent, model, image, fitness_fn), 1)
+    else: return history
 
 
 def visualize(pareto_front):
@@ -430,6 +436,7 @@ if __name__ == '__main__':
         prediction = F.softmax(logits,dim = -1)
         prediction = prediction.cpu().detach().numpy()
     """
-    pareto_front, pareto_front_image = run_NSGA2(model, img, pop_size=6, n_generation=2, fitness_fn=(
-        attack_fitness, perturbation_fitness))
-    visualize(pareto_front)
+    #pareto_front, pareto_front_image = run_NSGA2(model, img, pop_size=6, n_generation=2, fitness_fn=(attack_fitness, perturbation_fitness))
+    gens_info = run_NSGA2(model, img, pop_size=6, n_generation=2, fitness_fn=(attack_fitness, perturbation_fitness), checkpoints=[1])
+    print(gens_info)
+    #visualize(pareto_front)

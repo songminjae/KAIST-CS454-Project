@@ -42,7 +42,7 @@ def initialize_population(pop_size, img):
 
 
 def dominate(f1, f2):
-    if (f1[0] > f2[0] and f1[1] < f2[1]) or (f1[0] >= f2[0] and f1[1] < f2[1]) or (f1[0] > f2[0] and f1[1] <= f2[1]):
+    if (f1[0] > f2[0] and f1[1] > f2[1]) or (f1[0] >= f2[0] and f1[1] > f2[1]) or (f1[0] > f2[0] and f1[1] >= f2[1]):
         return True
     return False
 
@@ -193,17 +193,21 @@ def img_to_perturbation(img, origin_img):
     return img - origin_img
 
 
-def run_POBA_GA(model, image, pop_size, n_generation, fitness_fn):
+def run_POBA_GA(model, image, pop_size, n_generation, fitness_fn, checkpoints=[]):
     iteration = 0
+    history = []
 
     p = initialize_population(pop_size, image)
+    f = fitness(p, model, image, fitness_fn)
 
     while (iteration < n_generation):
-        f = fitness(p, model, image, fitness_fn)
         p = do_selection_crossover_mutation(pop_size, p, f, image)
+        f = fitness(p, model, image, fitness_fn)
         iteration = iteration + 1
+        if (iteration in checkpoints): history.append((f, p))
 
-    return f, p
+    if (len(checkpoints) == 0): return f, p
+    else: return history
 
 
 """ [FOR TEST, TO BE ERASED]
@@ -349,7 +353,6 @@ if __name__ == '__main__':
         prediction = F.softmax(logits,dim = -1)
         prediction = prediction.cpu().detach().numpy()
     """
-    fit_list, new_pop = run_POBA_GA(model, img, pop_size=6, n_generation=2, fitness_fn=(
-        attack_fitness, perturbation_fitness))
-    print(fit_list)
-    print(new_pop)
+    #fit_list, new_pop = run_POBA_GA(model, img, pop_size=6, n_generation=2, fitness_fn=(attack_fitness, perturbation_fitness))
+    gens_list = run_POBA_GA(model, img, pop_size=6, n_generation=2, fitness_fn=(attack_fitness, perturbation_fitness), checkpoints=[1])
+    print(gens_list)
