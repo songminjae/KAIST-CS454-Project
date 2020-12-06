@@ -283,7 +283,7 @@ def run_NSGA2(model, image, pop_size, n_generation, fitness_fn, checkpoints=[]):
         offspring = do_selection_crossover_mutation(
             pop_size, pareto_front, pareto_front_image, image)
         iteration = iteration + 1
-        if (iteration in checkpoints):
+        if (iteration in checkpoints and iteration != n_generation):
             history.append(fast_non_dominated_sort(parent, fitness(parent, model, image, fitness_fn), 1))
         
     if (len(checkpoints) == 0): return fast_non_dominated_sort(parent, fitness(parent, model, image, fitness_fn), 1)

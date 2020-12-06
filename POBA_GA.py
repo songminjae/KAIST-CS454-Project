@@ -204,7 +204,7 @@ def run_POBA_GA(model, image, pop_size, n_generation, fitness_fn, checkpoints=[]
         p = do_selection_crossover_mutation(pop_size, p, f, image)
         f = fitness(p, model, image, fitness_fn)
         iteration = iteration + 1
-        if (iteration in checkpoints): history.append((f, p))
+        if (iteration in checkpoints and iteration != n_generation): history.append((f, p))
 
     if (len(checkpoints) == 0): return f, p
     else: return history
