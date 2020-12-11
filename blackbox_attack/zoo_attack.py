@@ -38,7 +38,7 @@ def attack(input, label, net, n_classes, c = 1, batch_size= 128, TARGETED=False)
     var_size = input.view(-1).size()[0]
     real_modifier = torch.FloatTensor(input.size()).zero_().cuda()
     with torch.no_grad():
-        for iter in range(1000):
+        for iter in range(300):
             random_set = np.random.permutation(var_size)
             losses = np.zeros(2*batch_size, dtype=np.float32)
             #print(torch.sum(real_modifier))
@@ -76,7 +76,7 @@ def attack(input, label, net, n_classes, c = 1, batch_size= 128, TARGETED=False)
             coordinate_ADAM(losses, random_set[:batch_size], grad, batch_size, mt, vt, np_modifier, lr, adam_epoch, beta1, beta2)
             real_modifier = torch.from_numpy(np_modifier)
     #print(torch.norm(real_modifier_v)) 
-    return (input + real_modifier)
+    return (input + real_modifier.cuda())
 
 def zoo_attack(model,n_classes,batch_size):
     def att(x,y):

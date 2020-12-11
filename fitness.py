@@ -1,5 +1,5 @@
 import numpy as np
-
+import torch
 
 #Adopted from POBA-GA paper
 alpha = 3
@@ -83,18 +83,32 @@ def perturbation_fitness(query_image, target_image):
 
 def L0_fitness(query_image, target_image):
     pert_image = query_image - target_image
-    return np.sum(np.linalg.norm(pert_image, 0, 0))
-
+    if pert_image.ndim >=4:
+        m = (pert_image.shape[0]*pert_image.shape[1]*pert_image.shape[2]*pert_image.shape[3])
+    else:
+        m = (pert_image.shape[0]*pert_image.shape[1]*pert_image.shape[2])
+    l0 = torch.norm(torch.Tensor(pert_image), p = 0)/m
+    return l0.item()
 
 def L1_fitness(query_image, target_image):
     pert_image = query_image - target_image
-    return np.sum(np.linalg.norm(pert_image, 1, 0))
+    if pert_image.ndim >=4:
+        m = (pert_image.shape[0]*pert_image.shape[1]*pert_image.shape[2]*pert_image.shape[3])
+    else:
+        m = (pert_image.shape[0]*pert_image.shape[1]*pert_image.shape[2])
+    l1 = torch.norm(torch.Tensor(pert_image), p = 0)/m
+    return l1.item()
 
 def L2_fitness(query_image, target_image):
     pert_image = query_image - target_image
-    return np.sum(np.linalg.norm(pert_image, 2, 0))
-
+    if pert_image.ndim >=4:
+        m = (pert_image.shape[0]*pert_image.shape[1]*pert_image.shape[2]*pert_image.shape[3])
+    else:
+        m = (pert_image.shape[0]*pert_image.shape[1]*pert_image.shape[2])
+    l2 = torch.norm(torch.Tensor(pert_image), p = 0)/m
+    return l2.item()
 
 def Linf_fitness(query_image, target_image):
     pert_image = query_image - target_image
-    return np.sum(np.linalg.norm(pert_image, np.inf, 0))
+    l_inf = torch.norm(torch.Tensor(pert_image), p = float("inf"))
+    return l_inf.item()

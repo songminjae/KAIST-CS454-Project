@@ -7,7 +7,7 @@ import torch
 from torchvision import transforms
 from torchvision.datasets import MNIST, CIFAR10
 from imagenet import ImageNet
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 
 def get_preprocess(size,mean = 0 ,std = 1):
     #mean = np.array(mean)[...,np.newaxis,np.newaxis]
@@ -20,15 +20,19 @@ def get_preprocess(size,mean = 0 ,std = 1):
         return x
     return preprocess
 
-def load_dataset(dataset_name):
+def load_dataset(dataset_name, download = False):
     def _transform(pil):
         return np.array(pil).astype('float32')/255.
     if dataset_name == 'mnist':
-        dataset = MNIST(root='./datasets/', train = False,transform = _transform, download=True)
+        dataset = MNIST(root='./datasets/', train = False,transform = _transform, download=download)
     if dataset_name == 'cifar10':
-        dataset = CIFAR10(root='./datasets/', train = False,transform = _transform, download=True)
+        dataset = CIFAR10(root='./datasets/', train = False,transform = _transform, download=download)
     if dataset_name == 'imagenet':
-        dataset = ImageNet(root='./datasets/', split = 'val',transform = _transform, download=True)
+        dataset = ImageNet(root='./datasets/', split = 'val',transform = _transform, download=download)
+    
+    n_sample = 64
+    dataset = Subset(dataset, indices = list(range(0,len(dataset),len(dataset)//n_sample))[:n_sample])
+    
     return dataset
 
 def load_dataloader(dataset, batch_size = 1):

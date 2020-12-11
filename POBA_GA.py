@@ -5,7 +5,7 @@ import torch
 import torch.nn.functional as F
 import random
 from fitness import z_status, calculate_Z0, attack_fitness, perturbation_fitness
-from evaluation import query_cnt
+#from evaluation import query_cnt
 # how about number of noise point, nois point size? How?
 
 
@@ -153,10 +153,11 @@ def do_selection_crossover_mutation(pop_size, pop, fit_list, origin_img):
 
 
 def fitness(pop, model, image, fitness_fn):
-    global query_cnt
+    #global query_cnt
     fitness_fn_1, fitness_fn_2 = fitness_fn
     fit_1 = []
     fit_2 = []
+    attack_labels = []
     before_flag = z_status.Z0_flag
 
     preprocess = get_preprocess(size=32, mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
@@ -166,15 +167,17 @@ def fitness(pop, model, image, fitness_fn):
         conf_chr = confidence(model, preprocess(chromosome))
         f1 = fitness_fn_1(conf_chr, conf_img)
         f2 = fitness_fn_2(preprocess(chromosome), preprocessed_image)
+        attack_label = np.argmax(conf_chr)
         fit_1.append(f1)
         fit_2.append(f2)
+        attack_labels.append(attack_label)
     if (before_flag == 0 and z_status.Z0_flag == 1):
         calculate_Z0(pop, preprocessed_image, preprocess)
         return fitness(pop, model, image, fitness_fn)
-    query_cnt+=len(pop)
+    #query_cnt+=len(pop)
     fit_list = []
-    for a, b in zip(fit_1, fit_2):
-        fit_list.append([a, b])
+    for a, b, c in zip(fit_1, fit_2, attack_labels):
+        fit_list.append([a, b, c])
     return fit_list
 
 

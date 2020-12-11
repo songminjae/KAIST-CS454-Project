@@ -81,21 +81,16 @@ def evaluate(model, attack_method, dataloader, eps,n_classes = 10, batch_size = 
         
     return attack_success_rate, perturbation
 
-#adversarial_images = atk(images, labels)
 
 if __name__ == '__main__':
     batch_size = 64
     
     use_cuda = True
-    attack_methods = ['fgsm','deepfool','bim','cw','rfgsm','pgd','ffgsm','tpgd','mifgsm','multiattack']
-    #attack_methods = ['fgsm','deepfool','bim','cw']
+    attack_methods = ['fgsm','deepfool','bim','cw','rfgsm','pgd','ffgsm','tpgd','mifgsm','multiattack','zoo']
     #attack_methods = ['zoo']
     model_names = ['vgg16','resnet50','inception_v3']
     dataset_names = ['cifar10','imagenet'] # skip mnist
-    #dataset_names = ['cifar10']
-    #epss = [1/255]
     epss = [1/255, 2/255,4/255,8/255,16/255]
-    #epss = [8/255]
     
     for dataset_name in dataset_names:
         for model_name in model_names:
@@ -117,5 +112,6 @@ if __name__ == '__main__':
 
                     attack_success_rate, perturbation = evaluate(model,attack_method,dataloader,eps,n_classes)
                     
-                    print(dataset_name, model_name, attack_method, eps)
+                    print("dataset: {} model_name: {} attack_method: {} eps: {}".format(dataset_name, model_name, attack_method, eps))
                     print(attack_success_rate,perturbation)
+                    print()
